@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+
+
+
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="generator" content="Hexo 3.9.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.2.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/myicon-32x32.png?v=7.2.0">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/myicon-16x16.png?v=7.2.0">
+  <link rel="mask-icon" href="/images/logo.svg?v=7.2.0" color="#222">
+
+<link rel="stylesheet" href="/css/main.css?v=7.2.0">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.2.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    search: {
+      root: '/',
+      path: 'search.xml'
+    },
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    }
+  };
+</script>
+
+  <meta name="description" content="从网景创建SSL协议到目前的TLS 3.0已经有24个年头了，随着互联网的迅猛发展，现在主流的公司也纷纷进行了全站https的改造。跟随这波热潮也尝试了下应用https/http2.0，这里介绍下如何使用Let’s Encrypt签发免费的证书。 生成Let’s Encrypt证书talk is cheap,show me code:123git clone https://github.com/">
+<meta name="keywords" content="network,https">
+<meta property="og:type" content="article">
+<meta property="og:title" content="免费的https证书">
+<meta property="og:url" content="https://sdw2330976.github.io/network/免费的https证书/index.html">
+<meta property="og:site_name" content="shang&#39;s Blog">
+<meta property="og:description" content="从网景创建SSL协议到目前的TLS 3.0已经有24个年头了，随着互联网的迅猛发展，现在主流的公司也纷纷进行了全站https的改造。跟随这波热潮也尝试了下应用https/http2.0，这里介绍下如何使用Let’s Encrypt签发免费的证书。 生成Let’s Encrypt证书talk is cheap,show me code:123git clone https://github.com/">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-08-10T01:02:16.089Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="免费的https证书">
+<meta name="twitter:description" content="从网景创建SSL协议到目前的TLS 3.0已经有24个年头了，随着互联网的迅猛发展，现在主流的公司也纷纷进行了全站https的改造。跟随这波热潮也尝试了下应用https/http2.0，这里介绍下如何使用Let’s Encrypt签发免费的证书。 生成Let’s Encrypt证书talk is cheap,show me code:123git clone https://github.com/">
+  <link rel="canonical" href="https://sdw2330976.github.io/network/免费的https证书/">
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>免费的https证书 | shang's Blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">shang's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">不开心的根源在于读书太多而自由太少</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+    <ul id="menu" class="menu">
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+      
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br/>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+      
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br/>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+      
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br/>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+      
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br/>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+      
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br/>归档</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-sitemap">
+      
+    
+
+    <a href="/sitemap.xml" rel="section"><i class="menu-item-icon fa fa-fw fa-sitemap"></i> <br/>站点地图</a>
+
+  </li>
+    </ul>
+</nav>
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+            
+
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://sdw2330976.github.io/network/免费的https证书/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="上班的1990">
+      <meta itemprop="description" content="do something make yourself happy,such as coding.">
+      <meta itemprop="image" content="https://nimg.ws.126.net/?url=https://nos.netease.com/relottery/user/20170222/OloRZG.jpeg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="shang's Blog">
+    </span>
+      <header class="post-header">
+
+        
+          <h1 class="post-title" itemprop="name headline">免费的https证书
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-06-30 14:56:28" itemprop="dateCreated datePublished" datetime="2018-06-30T14:56:28+08:00">2018-06-30</time>
+            </span>
+          
+            
+
+            
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-08-10 09:02:16" itemprop="dateModified" datetime="2019-08-10T09:02:16+08:00">2019-08-10</time>
+              </span>
+            
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/network/" itemprop="url" rel="index"><span itemprop="name">network</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          <br/>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>从网景创建SSL协议到目前的TLS 3.0已经有24个年头了，随着互联网的迅猛发展，现在主流的公司也纷纷进行了全站https的改造。跟随这波热潮也尝试了下应用https/http2.0，这里介绍下如何使用<a href="https://certbot.eff.org/" target="_blank" rel="noopener">Let’s Encrypt</a>签发免费的证书。</p>
+<h3 id="生成Let’s-Encrypt证书"><a href="#生成Let’s-Encrypt证书" class="headerlink" title="生成Let’s Encrypt证书"></a>生成Let’s Encrypt证书</h3><p>talk is cheap,show me code:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/letsencrypt/letsencrypt</span><br><span class="line">cd letsencrypt</span><br><span class="line">./letsencrypt-auto certonly --standalone -d relottery.cn</span><br></pre></td></tr></table></figure></p>
+<p>命令执行完毕会出现提示：<br><blockquote><p>MPORTANT NOTES:</p>
+<ul>
+<li>Congratulations! Your certificate and chain have been saved at:<br>/etc/letsencrypt/live/relottery.cn/fullchain.pem<br>Your key file has been saved at:<br>/etc/letsencrypt/live/relottery.cn/privkey.pem<br>Your cert will expire on 2018-04-18. To obtain a new or tweaked<br>version of this certificate in the future, simply run<br>letsencrypt-auto again. To non-interactively renew <em>all</em> of your<br>certificates, run “letsencrypt-auto renew”</li>
+</ul>
+</blockquote></p>
+<p>大功告成，在<code>/etc/letsencrypt/live/relottery.cn/</code>目录下会生成秘钥证书文件：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cert.pem - Apache服务器端证书</span><br><span class="line">chain.pem - Apache根证书和中继证书</span><br><span class="line">fullchain.pem - Nginx所需要ssl_certificate文件</span><br><span class="line">privkey.pem - 安全证书KEY文件</span><br></pre></td></tr></table></figure></p>
+<p>这里我使用的nginx，所以我需要<code>fullchain.pem</code>和<code>privkey.pem</code>两个文件做如下配置：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ssl_certificate /etc/letsencrypt/live/relottery.cn/fullchain.pem;</span><br><span class="line">ssl_certificate_key /etc/letsencrypt/live/relottery.cn/privkey.pem;</span><br></pre></td></tr></table></figure></p>
+<p>细心的同学会发现，上面提示我们证书是存在有效期的(90天)，如果过期再手动去执行太蠢了，show the code：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">crontab -e </span><br><span class="line"></span><br><span class="line">30 2 * * 1 /home/app/letsencrypt/letsencrypt/letsencrypt-auto renew</span><br><span class="line">35 2 * * 1 /home/app/openresty/nginx/sbin/nginx -s reload</span><br></pre></td></tr></table></figure>
+<p>done.</p>
+<h3 id="遇到的问题"><a href="#遇到的问题" class="headerlink" title="遇到的问题"></a>遇到的问题</h3><blockquote><p>/home/app/letsencrypt/letsencrypt/letsencrypt-auto renew<br>WARNING: unable to check for updates.<br>Creating virtual environment…<br>Installing Python packages…<br>Had a problem while installing Python packages.<br>pip prints the following errors:</p>
+<p>Collecting argparse==1.4.0 (from -r /tmp/tmp.Xf3AdlgJol/letsencrypt-auto-requirements.txt (line 11))</p>
+<p>Downloading <a href="http://mirrors.aliyun.com/pypi/packages/f2/94/3af39d34be01a24a6e65433d19e107099374224905f1e0cc6bbe1fd22a2f/argparse-1.4.0-py2.py3-none-any.whl" target="_blank" rel="noopener">http://mirrors.aliyun.com/pypi/packages/f2/94/3af39d34be01a24a6e65433d19e107099374224905f1e0cc6bbe1fd22a2f/argparse-1.4.0-py2.py3-none-any.whl</a></p>
+<p>Downloading <a href="http://mirrors.aliyun.com/pypi/packages/fd/21/0c6f33829fadec8aca0c1ebb4d6f8101c05899356a58d1b2e506cb77cf18/letsencrypt-0.7.0-py2-none-any.whl" target="_blank" rel="noopener">http://mirrors.aliyun.com/pypi/packages/fd/21/0c6f33829fadec8aca0c1ebb4d6f8101c05899356a58d1b2e506cb77cf18/letsencrypt-0.7.0-py2-none-any.whl</a></p>
+<p>Collecting certbot==0.21.0 (from -r /tmp/tmp.Xf3AdlgJol/letsencrypt-auto-requirements.txt (line 206))</p>
+<p>Could not find a version that satisfies the requirement certbot==0.21.0 (from -r /tmp/tmp.Xf3AdlgJol/letsencrypt-auto-requirements.txt (line 206)) (from versions: 0.6.0, 0.7.0, 0.8.0, 0.8.1, 0.9.0, 0.9.1, 0.9.2, 0.9.3, 0.10.0, 0.10.1, 0.10.2, 0.11.0, 0.11.1, 0.12.0, 0.13.0, 0.14.0, 0.14.1, 0.14.2, 0.15.0, 0.16.0, 0.17.0, 0.18.0, 0.18.1, 0.18.2, 0.19.0, 0.20.0)<br>No matching distribution found for certbot==0.21.0 (from -r /tmp/tmp.Xf3AdlgJol/letsencrypt-auto-requirements.txt (line 206))</p>
+<p>Certbot has problem setting up the virtual environment.<br>We were not be able to guess the right solution from your pip<br>output.<br>Consult <a href="https://certbot.eff.org/docs/install.html#problems-with-python-virtual-environment" target="_blank" rel="noopener">https://certbot.eff.org/docs/install.html#problems-with-python-virtual-environment</a><br>for possible solutions.<br>You may also find some support resources at <a href="https://certbot.eff.org/support/" target="_blank" rel="noopener">https://certbot.eff.org/support/</a> .</p>
+</blockquote>
+<p>本来挺信任阿里云的pip源的  哎  果断换之：<br><figure class="highlight plain"><figcaption><span>~/.pip/pip.conf</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[global]</span><br><span class="line">index-url=https://pypi.tuna.tsinghua.edu.cn/simple</span><br><span class="line">[install]</span><br><span class="line">trusted-host=pypi.tuna.tsinghua.edu.cn</span><br></pre></td></tr></table></figure></p>
+<p>国内的pip镜像<br><blockquote><p>阿里云 <a href="http://mirrors.aliyun.com/pypi/simple/" target="_blank" rel="noopener">http://mirrors.aliyun.com/pypi/simple/</a><br>中国科技大学 <a href="https://pypi.mirrors.ustc.edu.cn/simple/" target="_blank" rel="noopener">https://pypi.mirrors.ustc.edu.cn/simple/</a><br>豆瓣(douban) <a href="http://pypi.douban.com/simple/" target="_blank" rel="noopener">http://pypi.douban.com/simple/</a><br>清华大学 <a href="https://pypi.tuna.tsinghua.edu.cn/simple/" target="_blank" rel="noopener">https://pypi.tuna.tsinghua.edu.cn/simple/</a><br>中国科学技术大学 <a href="http://pypi.mirrors.ustc.edu.cn/simple/" target="_blank" rel="noopener">http://pypi.mirrors.ustc.edu.cn/simple/</a></p>
+</blockquote></p>
+
+    </div>
+
+    
+    
+    
+    
+      <div>
+        <div id="reward-container">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button id="reward-button" disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+        
+      
+      <div style="display: inline-block">
+        <img src="https://raw.githubusercontent.com/sdw2330976/netty-learning/master/doc/wechatpay.jpeg" alt="上班的1990 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+      </div>
+
+    <footer class="post-footer">
+          
+        
+        <div class="post-tags">
+            <a href="/tags/network/" rel="tag"># network</a>
+          
+            <a href="/tags/https/" rel="tag"># https</a>
+          
+        </div>
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+              <a href="/Transaction/Java事务那点儿事儿/" rel="prev" title="Java事务那点儿事儿">
+                Java事务那点儿事儿 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+  </div>
+
+
+          </div>
+          
+
+
+        </div>
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image"
+      src="https://nimg.ws.126.net/?url=https://nos.netease.com/relottery/user/20170222/OloRZG.jpeg"
+      alt="上班的1990">
+  <p class="site-author-name" itemprop="name">上班的1990</p>
+  <div class="site-description motion-element" itemprop="description">do something make yourself happy,such as coding.</div>
+</div>
+  <nav class="site-state motion-element">
+      <div class="site-state-item site-state-posts">
+        
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">32</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+    
+      
+      
+      <div class="site-state-item site-state-categories">
+        
+          
+            <a href="/categories/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分类</span>
+        </a>
+      </div>
+    
+      
+      
+      <div class="site-state-item site-state-tags">
+        
+          
+            <a href="/tags/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">标签</span>
+        </a>
+      </div>
+    
+  </nav>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+      
+      
+        
+      
+      
+        
+      
+        <a href="https://github.com/sdw2330976" title="GitHub &rarr; https://github.com/sdw2330976" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+    
+      <span class="links-of-author-item">
+      
+      
+        
+      
+      
+        
+      
+        <a href="https://weibo.com/1853131443" title="Weibo &rarr; https://weibo.com/1853131443" rel="noopener" target="_blank"><i class="fa fa-fw fa-weibo"></i>Weibo</a>
+      </span>
+    
+  </div>
+
+
+
+        </div>
+      </div>
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#生成Let’s-Encrypt证书"><span class="nav-number">1.</span> <span class="nav-text">生成Let’s Encrypt证书</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#遇到的问题"><span class="nav-number">2.</span> <span class="nav-text">遇到的问题</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2018 – <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">上班的1990</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.9.0</div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.2.0</div>
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+      </div>
+
+    
+
+  </div>
+
+  
+  <script src="/lib/jquery/index.js?v=3.4.1"></script>
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  <script src="/js/utils.js?v=7.2.0"></script>
+  <script src="/js/motion.js?v=7.2.0"></script>
+
+  
+  <script src="/js/affix.js?v=7.2.0"></script>
+  <script src="/js/schemes/pisces.js?v=7.2.0"></script>
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.2.0"></script>
+<script src="/js/post-details.js?v=7.2.0"></script>
+
+
+
+  <script src="/js/next-boot.js?v=7.2.0"></script>
+
+  
+
+  
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

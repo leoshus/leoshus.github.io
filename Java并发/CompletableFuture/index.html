@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+
+
+
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="generator" content="Hexo 3.9.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.2.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/myicon-32x32.png?v=7.2.0">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/myicon-16x16.png?v=7.2.0">
+  <link rel="mask-icon" href="/images/logo.svg?v=7.2.0" color="#222">
+
+<link rel="stylesheet" href="/css/main.css?v=7.2.0">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.2.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    search: {
+      root: '/',
+      path: 'search.xml'
+    },
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    }
+  };
+</script>
+
+  <meta name="description" content="CompletableFuture是由并发大师Doug Lea编写于JDK8中，可以显式的主动控制任务完成并设置结果和状态，并在任务完成后可以结合CompletionStage提供的接续方法完成相关回调处理。">
+<meta name="keywords" content="Concurrent,Future">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CompletableFuture">
+<meta property="og:url" content="https://sdw2330976.github.io/Java并发/CompletableFuture/index.html">
+<meta property="og:site_name" content="shang&#39;s Blog">
+<meta property="og:description" content="CompletableFuture是由并发大师Doug Lea编写于JDK8中，可以显式的主动控制任务完成并设置结果和状态，并在任务完成后可以结合CompletionStage提供的接续方法完成相关回调处理。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-08-10T01:02:16.070Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="CompletableFuture">
+<meta name="twitter:description" content="CompletableFuture是由并发大师Doug Lea编写于JDK8中，可以显式的主动控制任务完成并设置结果和状态，并在任务完成后可以结合CompletionStage提供的接续方法完成相关回调处理。">
+  <link rel="canonical" href="https://sdw2330976.github.io/Java并发/CompletableFuture/">
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>CompletableFuture | shang's Blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">shang's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">不开心的根源在于读书太多而自由太少</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+    <ul id="menu" class="menu">
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+      
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br/>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+      
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br/>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+      
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br/>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+      
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br/>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+      
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br/>归档</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-sitemap">
+      
+    
+
+    <a href="/sitemap.xml" rel="section"><i class="menu-item-icon fa fa-fw fa-sitemap"></i> <br/>站点地图</a>
+
+  </li>
+    </ul>
+</nav>
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+            
+
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://sdw2330976.github.io/Java并发/CompletableFuture/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="上班的1990">
+      <meta itemprop="description" content="do something make yourself happy,such as coding.">
+      <meta itemprop="image" content="https://nimg.ws.126.net/?url=https://nos.netease.com/relottery/user/20170222/OloRZG.jpeg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="shang's Blog">
+    </span>
+      <header class="post-header">
+
+        
+          <h1 class="post-title" itemprop="name headline">CompletableFuture
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-07-31 20:26:02" itemprop="dateCreated datePublished" datetime="2019-07-31T20:26:02+08:00">2019-07-31</time>
+            </span>
+          
+            
+
+            
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-08-10 09:02:16" itemprop="dateModified" datetime="2019-08-10T09:02:16+08:00">2019-08-10</time>
+              </span>
+            
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Java并发/" itemprop="url" rel="index"><span itemprop="name">Java并发</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          <br/>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><code>CompletableFuture</code>是由并发大师<code>Doug Lea</code>编写于JDK8中，可以显式的主动控制任务完成并设置结果和状态，并在任务完成后可以结合<code>CompletionStage</code>提供的接续方法完成相关回调处理。<br><a id="more"></a></p>
+<h4 id="Completable概述"><a href="#Completable概述" class="headerlink" title="Completable概述"></a>Completable概述</h4><p>JDK8之前我们使用异步调用：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">ExecutorService executorService = <span class="keyword">new</span> ThreadPoolExecutor(<span class="number">4</span>, <span class="number">10</span>, <span class="number">2000</span>, TimeUnit.MILLISECONDS, <span class="keyword">new</span> LinkedBlockingQueue&lt;&gt;(<span class="number">1000</span>));</span><br><span class="line">Future&lt;?&gt; result = executorService.submit(() -&gt; &#123;</span><br><span class="line">    System.out.println(<span class="string">"start to make cake..."</span>);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        System.out.println(<span class="string">"finished cake..."</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"cake"</span>;</span><br><span class="line">   &#125;);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        System.out.println(result.get());</span><br><span class="line">        System.out.println(<span class="string">"I go to drink milk."</span>);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure><br>JDK8我们使用<code>CompletableFuture</code>:<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">CompletableFuture.supplyAsync(() -&gt; &#123;</span><br><span class="line">    System.out.println(<span class="string">"start to make cake..."</span>);</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    &#125;</span><br><span class="line">    System.out.println(<span class="string">"finished cake..."</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="string">"cake"</span>;</span><br><span class="line">&#125;).thenAccept(cake -&gt; &#123;</span><br><span class="line">    System.out.println(<span class="string">"I eat "</span> + cake);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">System.out.println(<span class="string">"I go to drink milk."</span>);</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    Thread.currentThread().join();</span><br><span class="line">&#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">    e.printStackTrace();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>代码对比可以看出,JDK5提供的<code>Future</code>提供异步计算结果的能力，通过<code>isDone()</code>方法检查计算是否完成或者<code>get()</code>阻塞调用线程等待计算结果返回，又或者使用<code>cancel()</code>取消任务的执行，虽然<code>Future</code>以及相关使用方法提供了异步执行的能力，但是对于计算结果的获取却<br>很不便利，只能通过轮询或者阻塞方式得到，阻塞的方式显然违背了异步编程的初衷，轮询的方式又会浪费无畏的CPU资源，而且不能及时得到返回结果。<br>JDK8提供了<code>CompletableFuture</code>类，实现了<code>java.util.concurrent.Future</code>和<code>java.util.concurrent.CompletionStage</code>接口，所以我们还可以像以前那样通过阻塞或者轮询的方式获得结果，尽管这种方式不推荐使用。<br><code>CompletionStage</code>定义了任务执行完成后不同阶段，提供任务执行完成后进行操作的回调,<code>CompletableFuture</code>类中包含了大概50多个方法，但从命名是有规律可循的</p>
+<ol>
+<li>用于创建<code>CompletableFuture</code>对象</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">CompletableFuture</span><span class="params">()</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> CompletableFuture&lt;Void&gt; <span class="title">allOf</span><span class="params">(CompletableFuture&lt;?&gt;... cfs)</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> CompletableFuture&lt;Object&gt; <span class="title">anyOf</span><span class="params">(CompletableFuture&lt;?&gt;... cfs)</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> CompletableFuture&lt;Void&gt; <span class="title">runAsync</span><span class="params">(Runnable runnable)</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> CompletableFuture&lt;Void&gt; <span class="title">runAsync</span><span class="params">(Runnable runnable, Executor executor)</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> &lt;U&gt; CompletableFuture&lt;U&gt; <span class="title">supplyAsync</span><span class="params">(Supplier&lt;U&gt; supplier)</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> &lt;U&gt; CompletableFuture&lt;U&gt; <span class="title">supplyAsync</span><span class="params">(Supplier&lt;U&gt; supplier, Executor executor)</span> </span></span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>用于判断当前状态和同步等待取值</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> T <span class="title">join</span><span class="params">()</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> T <span class="title">get</span><span class="params">(<span class="keyword">long</span> timeout, TimeUnit unit)</span> <span class="keyword">throws</span> InterruptedException, ExecutionException, TimeoutException</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> T <span class="title">getNow</span><span class="params">(T valueIfAbsent)</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isCancelled</span><span class="params">()</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isCompletedExceptionally</span><span class="params">()</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isDone</span><span class="params">()</span></span></span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li><p>用于显示得控制<code>CompletableFuture</code>完成状态</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">complete</span><span class="params">(T value)</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">completeExceptionally</span><span class="params">(Throwable ex)</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">cancel</span><span class="params">(<span class="keyword">boolean</span> mayInterruptIfRunning)</span></span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p><code>CompletableFutre</code>的接续方法，任务完成后的回调</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">thenApply, thenApplyAsync</span><br><span class="line">thenAccept, thenAcceptAsync</span><br><span class="line">thenRun, thenRunAsync</span><br><span class="line">thenCombine, thenCombineAsync</span><br><span class="line">thenAcceptBoth, thenAcceptBothAsync</span><br><span class="line">runAfterBoth, runAfterBothAsync</span><br><span class="line">applyToEither, applyToEitherAsync</span><br><span class="line">acceptEither, acceptEitherAsync</span><br><span class="line">runAfterEither, runAfterEitherAsync</span><br><span class="line">thenCompose, thenComposeAsync</span><br><span class="line">whenComplete, whenCompleteAsync</span><br><span class="line">handle, handleAsync</span><br><span class="line">exceptionally</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<blockquote>
+<p>以<code>Async</code>结尾的都是异步方法，如果指定了线程池则使用指定的线程池，否则在默认的<code>ForkJoinPool.commonPool()</code>中执行<br>以<code>run</code>开头的方法，其方法入参的lambda表达式一定是<code>无参数</code> 并且<code>无返回值</code> 即<code>Runnable</code>接口<br>以<code>supply</code>开头的方法，其方法入参的lambda表达式一定是<code>无参数</code> 并<code>有返回值</code> 即<code>Supplier</code>接口<br>以<code>accepet</code>开头或结尾的方法，其方法入参的lambda表达式一定是<code>有参数</code> 并<code>无返回值</code> 即<code>Comsumer</code>接口<br>以<code>apply</code>开头或结尾的方法，其方法入参的lambda表达式一定是<code>有参数</code>并<code>有返回值</code> 即<code>Function</code>接口<br>带有<code>either</code>后缀的表示谁先完成则消费谁</p>
+</blockquote>
+<h4 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h4><p>了解了<code>CompletableFuture</code>的大概用法，我们从<code>runAsync</code>入手看看其执行过程<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> CompletableFuture&lt;Void&gt; <span class="title">runAsync</span><span class="params">(Runnable runnable)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> asyncRunStage(asyncPool, runnable);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>这里的<code>asyncPool</code>通过判断是否支持并行化 默认使用<code>ForkJoinPool.commonPool()</code></p>
+<blockquote>
+<p>private static final boolean useCommonPool = (ForkJoinPool.getCommonPoolParallelism() &gt; 1);<br>private static final Executor asyncPool = useCommonPool ? ForkJoinPool.commonPool() : new ThreadPerTaskExecutor();</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> CompletableFuture&lt;Void&gt; <span class="title">asyncRunStage</span><span class="params">(Executor e, Runnable f)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (f == <span class="keyword">null</span>) <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException();</span><br><span class="line">    CompletableFuture&lt;Void&gt; d = <span class="keyword">new</span> CompletableFuture&lt;Void&gt;();</span><br><span class="line">    e.execute(<span class="keyword">new</span> AsyncRun(d, f));</span><br><span class="line">    <span class="keyword">return</span> d;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@SuppressWarnings</span>(<span class="string">"serial"</span>)</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">AsyncRun</span> <span class="keyword">extends</span> <span class="title">ForkJoinTask</span>&lt;<span class="title">Void</span>&gt;</span></span><br><span class="line"><span class="class">            <span class="keyword">implements</span> <span class="title">Runnable</span>, <span class="title">AsynchronousCompletionTask</span> </span>&#123;</span><br><span class="line">    CompletableFuture&lt;Void&gt; dep; Runnable fn;</span><br><span class="line">    AsyncRun(CompletableFuture&lt;Void&gt; dep, Runnable fn) &#123;</span><br><span class="line">        <span class="keyword">this</span>.dep = dep; <span class="keyword">this</span>.fn = fn;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> Void <span class="title">getRawResult</span><span class="params">()</span> </span>&#123; <span class="keyword">return</span> <span class="keyword">null</span>; &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">setRawResult</span><span class="params">(Void v)</span> </span>&#123;&#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">exec</span><span class="params">()</span> </span>&#123; run(); <span class="keyword">return</span> <span class="keyword">true</span>; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        CompletableFuture&lt;Void&gt; d; Runnable f;</span><br><span class="line">        <span class="keyword">if</span> ((d = dep) != <span class="keyword">null</span> &amp;&amp; (f = fn) != <span class="keyword">null</span>) &#123;</span><br><span class="line">            dep = <span class="keyword">null</span>; fn = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">if</span> (d.result == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    f.run();</span><br><span class="line">                    d.completeNull();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">                    d.completeThrowable(ex);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            d.postComplete();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+    
+      <div>
+        <div id="reward-container">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button id="reward-button" disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+        
+      
+      <div style="display: inline-block">
+        <img src="https://raw.githubusercontent.com/sdw2330976/netty-learning/master/doc/wechatpay.jpeg" alt="上班的1990 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+      </div>
+
+    <footer class="post-footer">
+          
+        
+        <div class="post-tags">
+            <a href="/tags/Concurrent/" rel="tag"># Concurrent</a>
+          
+            <a href="/tags/Future/" rel="tag"># Future</a>
+          
+        </div>
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+              <a href="/Java并发/ScheduledThreadPoolExecutor/" rel="next" title="ScheduledThreadPoolExecutor">
+                <i class="fa fa-chevron-left"></i> ScheduledThreadPoolExecutor
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+              <a href="/Java并发/Java线程状态/" rel="prev" title="Java线程状态">
+                Java线程状态 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+  </div>
+
+
+          </div>
+          
+
+
+        </div>
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image"
+      src="https://nimg.ws.126.net/?url=https://nos.netease.com/relottery/user/20170222/OloRZG.jpeg"
+      alt="上班的1990">
+  <p class="site-author-name" itemprop="name">上班的1990</p>
+  <div class="site-description motion-element" itemprop="description">do something make yourself happy,such as coding.</div>
+</div>
+  <nav class="site-state motion-element">
+      <div class="site-state-item site-state-posts">
+        
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">32</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+    
+      
+      
+      <div class="site-state-item site-state-categories">
+        
+          
+            <a href="/categories/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分类</span>
+        </a>
+      </div>
+    
+      
+      
+      <div class="site-state-item site-state-tags">
+        
+          
+            <a href="/tags/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">标签</span>
+        </a>
+      </div>
+    
+  </nav>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+      
+      
+        
+      
+      
+        
+      
+        <a href="https://github.com/sdw2330976" title="GitHub &rarr; https://github.com/sdw2330976" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+    
+      <span class="links-of-author-item">
+      
+      
+        
+      
+      
+        
+      
+        <a href="https://weibo.com/1853131443" title="Weibo &rarr; https://weibo.com/1853131443" rel="noopener" target="_blank"><i class="fa fa-fw fa-weibo"></i>Weibo</a>
+      </span>
+    
+  </div>
+
+
+
+        </div>
+      </div>
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#Completable概述"><span class="nav-number">1.</span> <span class="nav-text">Completable概述</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#源码分析"><span class="nav-number">2.</span> <span class="nav-text">源码分析</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2018 – <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">上班的1990</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.9.0</div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.2.0</div>
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+      </div>
+
+    
+
+  </div>
+
+  
+  <script src="/lib/jquery/index.js?v=3.4.1"></script>
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  <script src="/js/utils.js?v=7.2.0"></script>
+  <script src="/js/motion.js?v=7.2.0"></script>
+
+  
+  <script src="/js/affix.js?v=7.2.0"></script>
+  <script src="/js/schemes/pisces.js?v=7.2.0"></script>
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.2.0"></script>
+<script src="/js/post-details.js?v=7.2.0"></script>
+
+
+
+  <script src="/js/next-boot.js?v=7.2.0"></script>
+
+  
+
+  
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

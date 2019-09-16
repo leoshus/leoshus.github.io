@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+
+
+
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="generator" content="Hexo 3.9.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.2.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/myicon-32x32.png?v=7.2.0">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/myicon-16x16.png?v=7.2.0">
+  <link rel="mask-icon" href="/images/logo.svg?v=7.2.0" color="#222">
+
+<link rel="stylesheet" href="/css/main.css?v=7.2.0">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.2.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    search: {
+      root: '/',
+      path: 'search.xml'
+    },
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    }
+  };
+</script>
+
+  <meta name="description" content="volatile是轻量级的synchronized，理解volatile特性的一个好办法就是把对volatile变量的读/写，看成是使用同一把锁对这些单个读/写操作做同步。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="并发笔记之volatile实现原理">
+<meta property="og:url" content="https://sdw2330976.github.io/Java并发/并发笔记之volatile实现原理/index.html">
+<meta property="og:site_name" content="shang&#39;s Blog">
+<meta property="og:description" content="volatile是轻量级的synchronized，理解volatile特性的一个好办法就是把对volatile变量的读/写，看成是使用同一把锁对这些单个读/写操作做同步。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://sdw2330976.github.io/Java并发/并发笔记之volatile实现原理/cpucachemodel.png">
+<meta property="og:image" content="https://sdw2330976.github.io/Java并发/并发笔记之volatile实现原理/volatile-write.png">
+<meta property="og:image" content="https://sdw2330976.github.io/Java并发/并发笔记之volatile实现原理/volatile-read.png">
+<meta property="og:updated_time" content="2019-08-25T14:05:09.327Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="并发笔记之volatile实现原理">
+<meta name="twitter:description" content="volatile是轻量级的synchronized，理解volatile特性的一个好办法就是把对volatile变量的读/写，看成是使用同一把锁对这些单个读/写操作做同步。">
+<meta name="twitter:image" content="https://sdw2330976.github.io/Java并发/并发笔记之volatile实现原理/cpucachemodel.png">
+  <link rel="canonical" href="https://sdw2330976.github.io/Java并发/并发笔记之volatile实现原理/">
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>并发笔记之volatile实现原理 | shang's Blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">shang's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">不开心的根源在于读书太多而自由太少</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+    <ul id="menu" class="menu">
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+      
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br/>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+      
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br/>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+      
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br/>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+      
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br/>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+      
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br/>归档</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-sitemap">
+      
+    
+
+    <a href="/sitemap.xml" rel="section"><i class="menu-item-icon fa fa-fw fa-sitemap"></i> <br/>站点地图</a>
+
+  </li>
+    </ul>
+</nav>
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+            
+
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://sdw2330976.github.io/Java并发/并发笔记之volatile实现原理/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="上班的1990">
+      <meta itemprop="description" content="do something make yourself happy,such as coding.">
+      <meta itemprop="image" content="https://nimg.ws.126.net/?url=https://nos.netease.com/relottery/user/20170222/OloRZG.jpeg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="shang's Blog">
+    </span>
+      <header class="post-header">
+
+        
+          <h1 class="post-title" itemprop="name headline">并发笔记之volatile实现原理
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-08-14 09:22:44" itemprop="dateCreated datePublished" datetime="2019-08-14T09:22:44+08:00">2019-08-14</time>
+            </span>
+          
+            
+
+            
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-08-25 22:05:09" itemprop="dateModified" datetime="2019-08-25T22:05:09+08:00">2019-08-25</time>
+              </span>
+            
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Java并发/" itemprop="url" rel="index"><span itemprop="name">Java并发</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          <br/>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><code>volatile</code>是轻量级的<code>synchronized</code>，理解volatile特性的一个好办法就是把对volatile变量的读/写，看成是使用同一把锁对这些单个读/写操作做同步。<br><a id="more"></a></p>
+<p>Java语言规范对volatile的定义如下：</p>
+<blockquote>
+<p>Java编程语言允许线程访问共享变量，为了确保共享变量能被准确和一致的更新，线程应该确保通过排他锁单独获得这个变量。</p>
+</blockquote>
+<p>通俗点讲就是一个变量如果被<code>volatile</code>修饰了，则Java可以确保所有线程看到这个变量是一致的，如果某个线程对volatile修饰的变量做修改，那么其他线程就可以<br>立马看到这个更新，也就是所谓的线程可见性</p>
+<h3 id="操作系统语义"><a href="#操作系统语义" class="headerlink" title="操作系统语义"></a>操作系统语义</h3><p>计算机运行程序时，每条指令都在CPU中执行，执行过程中势必也会读写数据。程序的数据存储在主存中，现代计算机发展到目前 主存的读写速度和CPU的计算速度仍然存在巨大的差距，<br>所以就有了高速缓存(L1/L2/L3)。CPU高速缓存为某个CPU独有，只与该CPU运行的线程有关。<br>CPU的高速缓存解决了效率问题，但带来的新的问题：数据一致性问题<br>在程序运行时会将数据复制一份到高速缓存中，CPU计算时直接从高速缓存中读写，只有运行结束后才会将数据刷新到主存中。<br>解决缓存一致性方案有两种：</p>
+<ul>
+<li>在地址总线加LOCK#锁</li>
+<li>缓存一致性协议(MESI协议)</li>
+</ul>
+<p>方案一采用一种独占的方式来实现，即总线加LOCK#锁，则同时只有一个CPU能够操作，效率较为低下<br>方案二缓存一致性协议(MESI协议)它确保每个缓存中使用的共享变量的副本是一致的。其核心思想：当某个CPU在写数据时，如果发现操作的变量是共享变量，则会通知其他CPU告知改变量的缓存行是无效的，<br>因此其他CPU在读取该变量时发现其无效会重新从主存中加载数据。</p>
+<img src="/Java并发/并发笔记之volatile实现原理/cpucachemodel.png">
+<h3 id="Java内存模型"><a href="#Java内存模型" class="headerlink" title="Java内存模型"></a>Java内存模型</h3><h4 id="原子性"><a href="#原子性" class="headerlink" title="原子性"></a>原子性</h4><p>即一个操作或者多个操作 要么全部成功要么全部失败<br>单线程环境下，我们可以认为整个步骤都是原子操作，但在多线程环境下则不同，Java只保证了基本数据类型的变量和赋值操作才是原子性的 多线程下原子性则需要锁、synchronized来保证。<br><code>volatile</code>无法保证复合操作的原子性</p>
+<h4 id="可见性"><a href="#可见性" class="headerlink" title="可见性"></a>可见性</h4><p>即多个线程访问同一变量时，一个线程修改了这个变量的值 其他线程能够立刻看到修改的值。<br>volatile写操作语义：</p>
+<ol>
+<li>修改volatile变量时会强制将修改后的值刷新到主内存中</li>
+<li>修改volatile变量后会导致其他线程工作内存中对应的变量值失效，故再读取该变量值时就需要重新从主存中读取</li>
+</ol>
+<h4 id="有序性"><a href="#有序性" class="headerlink" title="有序性"></a>有序性</h4><p>即程序执行的顺序按照代码的先后顺序执行。<br>在Java内存模型中，为了效率是允许编译器和处理器对指令进行重排序，当然重排序不会影响单线程的运行结果，但是对多线程会有影响。<br>Java提供volatile来保证一定的有序性。</p>
+<h3 id="volatile原理"><a href="#volatile原理" class="headerlink" title="volatile原理"></a>volatile原理</h3><p><code>volatile</code>可以保证线程可见性且提供了一定的有序性，但无法保证原子性。</p>
+<blockquote>
+<p>观察加入volatile关键字和没有加入volatile关键字时所生成的汇编代码会发现，加入volatile关键字时，会多出一个lock前缀指令</p>
+</blockquote>
+<p>lock前缀指令实际上相当于一个内存屏障（也称内存栅栏，是一组处理器指令，用于实现对内存操作的顺序限制），内存屏障会提供3个功能：</p>
+<ol>
+<li>它确保指令重排序时不会把其后面的指令重排序到内存屏障之前，也不会把前面的指令排到内存屏障的后面；即执行到内存屏障指令时其前面的操作都已经全部完成</li>
+<li>它会强制将对缓存的修改操作立即写入主存</li>
+<li>如果是写操作 他会导致其他CPU的对应缓存行无效</li>
+</ol>
+<p>在JVM底层<code>volatile</code>是采用内存屏障来实现，即：</p>
+<ul>
+<li>保证可见性 但不保证原子性</li>
+<li>禁止指令重排序</li>
+</ul>
+<h4 id="指令重排序"><a href="#指令重排序" class="headerlink" title="指令重排序"></a>指令重排序</h4><p>在执行程序时为了提供性能，编译器和处理器通常会对指令做重排序：</p>
+<ol>
+<li>编译器重排序 编译器在不改变单线程语义的前提下，可以重新安排语句的执行顺序</li>
+<li>处理器重排序 如果不存在数据依赖性，处理器可以改变语句对应机器指令的执行顺序</li>
+</ol>
+<p>指令重排序对单线程没有影响，但是会影响多线程的正确性。故对多线程我们需要禁止指令重排序</p>
+<h4 id="happens-before原则"><a href="#happens-before原则" class="headerlink" title="happens-before原则"></a>happens-before原则</h4><p>Java内存模型中具备一些先天的“有序性”，即不需要通过任何手段就能保证有序性，这个通常被称为happens-before(先行发生原则)。如果两个操作的执行顺序无法通过happens-before原则<br>推导出来，那么它们就不能保证他们的有序性，虚拟机就可以随意地对他们进行重排序。<br>下面介绍下happens-before原则：</p>
+<ul>
+<li>程序次序规则：一个线程内，按照代码顺序，书写在前面的操作先行发生于书写在后面的操作</li>
+<li>锁定规则：一个unlock操作先行发生于后面对同一个锁的lock操作</li>
+<li>volatile变量规则：对一个变量的写操作先行发生于后面对这个变量的读操作</li>
+<li>传递规则： 如果操作A先行发生于B，而操作B又先行发生于C，则可得出操作A先行发生于C</li>
+<li>线程启动规则：Thread对象的start()方法先行发生于此线程的每一个动作</li>
+<li>线程中断规则：对线程interrupt()方法的调用先行发生于被中断线程检测到中断事件的发生</li>
+<li>线程终结规则：线程中所有的操作都先行发生于线程的终止检测，我们可以通过Thread.join()方法结束、Thread.isAlive()的返回值手段检测到线程已经终止执行</li>
+<li>对象终结规则：一个对象的初始化先行发生于线程他的finalize()方法的开始</li>
+</ul>
+<h4 id="volatile写-读建立的happens-before关系"><a href="#volatile写-读建立的happens-before关系" class="headerlink" title="volatile写-读建立的happens-before关系"></a>volatile写-读建立的happens-before关系</h4><p>从内存语义的角度来说，volatile的写-读与锁的释放-获取具有相同的内存效果：</p>
+<ul>
+<li>volatile的写和锁的释放有相同的内存语义</li>
+<li>volatile的读和锁的获取有相同的内存语义</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">VolatileExample</span></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> a = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">volatile</span> <span class="keyword">boolean</span> flag = <span class="keyword">false</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">writer</span><span class="params">()</span></span>&#123;</span><br><span class="line">        a = <span class="number">1</span>;      <span class="comment">//1</span></span><br><span class="line">        flag = <span class="keyword">true</span>;<span class="comment">//2</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">reader</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(flag)&#123;     <span class="comment">//3</span></span><br><span class="line">            <span class="keyword">int</span> i = a;<span class="comment">//4</span></span><br><span class="line">            ... ...</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>假设线程A执行writer()方法之后，线程B执行reader()方法。根据happens-before原则，这个过程建立的happens before关系可以分成两类：</p>
+<ol>
+<li>根据程序次序规则，1 happens before 2; 3 happens before 4</li>
+<li>根据volatile规则， 2 happends before 3</li>
+<li>根据happens-before的传递性规则，1 happens before 4</li>
+</ol>
+<h4 id="volatile-写-读的内存语义"><a href="#volatile-写-读的内存语义" class="headerlink" title="volatile 写-读的内存语义"></a>volatile 写-读的内存语义</h4><ul>
+<li><p>volatile写的内存语义：<br>当写一个volatile变量时，JMM会把该线程对应的本地内存中的共享变量值刷新到主内存</p>
+</li>
+<li><p>volatile读的内存语义：<br>当读一个volatile变量时，JMM会把该线程对应的本地内存置为无效。线程接下来将从主内存中读取共享变量。</p>
+</li>
+</ul>
+<p>总结一下volatile写和volatile读的内存语义：</p>
+<ul>
+<li>线程A写一个volatile变量，实质上是线程A向接下来将要读取这个volatile变量的某个线程发出了（其对共享变量所在修改的）消息</li>
+<li>线程B读一个volatile变量，实质上是线程B接收到之前某个线程发出的（在写这个volatile变量之前对共享变量所在修改的）消息</li>
+<li>线程A写一个volatile变量，随后线程B读这个volatile变量，这个过程实质上是线程A通过主内存向线程B发送消息</li>
+</ul>
+<h4 id="volatile内存语义的实现"><a href="#volatile内存语义的实现" class="headerlink" title="volatile内存语义的实现"></a>volatile内存语义的实现</h4><p>前面提到过重排序分为编译器重排序和处理器重排序。为了实现volatile内存语义，JMM会分别限制这两种类型的重排序类型。下面是针对编译器制定的volatile重排序规则表：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">是否能重排序</th>
+<th style="text-align:center">第二个操作</th>
+<th style="text-align:center"></th>
+<th style="text-align:center"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">第一个操作</td>
+<td style="text-align:center">普通读/写</td>
+<td style="text-align:center">volatile读</td>
+<td style="text-align:center">volatile写</td>
+</tr>
+<tr>
+<td style="text-align:center">普通读/写</td>
+<td style="text-align:center"></td>
+<td style="text-align:center"></td>
+<td style="text-align:center">NO</td>
+</tr>
+<tr>
+<td style="text-align:center">volatile读</td>
+<td style="text-align:center">NO</td>
+<td style="text-align:center">NO</td>
+<td style="text-align:center">NO</td>
+</tr>
+<tr>
+<td style="text-align:center">volatile写</td>
+<td style="text-align:center"></td>
+<td style="text-align:center">NO</td>
+<td style="text-align:center">NO</td>
+</tr>
+</tbody>
+</table>
+<p>从上表可以看出：</p>
+<ul>
+<li>当第二个操作是volatile写时，不管第一个操作是什么，都不能重排序。这个规则确保volatile写之前的操作不会被编译器重排序到volatile写之后</li>
+<li>当第一个操作是volatile读时，不管第二个操作是什么，都不能重排序。这个规则确保volatile读之后的操作都不会被编译器重排序到volatile读之前</li>
+<li>当第一个操作是volatile写，第二个操作是volatile读时，不能重排序</li>
+</ul>
+<p>为了实现volatile的内存语义，编译器在生成字节码时，会在指令序列中插入内存屏障来禁止特定类型的处理器重排序。对于编译器来说，发现一个最优布置来最小化插入屏障的总数几乎不可能，<br>为此，JMM采取保守策略。下面是基于保守策略的JMM内存屏障插入策略：</p>
+<ul>
+<li>在每个volatile写操作的前面插入一个StoreStore屏障</li>
+<li>在每个volatile写操作的后面插入一个StoreLoad屏障</li>
+<li>在每个volatile读操作的后面插入一个LoadLoad屏障</li>
+<li>在每个volatile读操作的后面插入一个LoadStore屏障</li>
+</ul>
+<p>保守策略下 volatile写插入内存屏障后生成的指令序列示意图：</p>
+<img src="/Java并发/并发笔记之volatile实现原理/volatile-write.png">
+<p>保守策略下 volatile读插入内存屏障后生成的指令序列示意图：</p>
+<img src="/Java并发/并发笔记之volatile实现原理/volatile-read.png">
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>volatile是并发编程中的一种优化，某些场景下可以代替synchronized，但volatile并不能完全取代synchronized，使用volatile总的来说，必须同时满足下面两个条件<br>才能保证在并发环境的线程安全：</p>
+<ol>
+<li>对变量的写操作不依赖于当前值</li>
+<li>该变量没有包含在具有其他变量的不变式中</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+    
+      <div>
+        <div id="reward-container">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button id="reward-button" disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+        
+      
+      <div style="display: inline-block">
+        <img src="https://raw.githubusercontent.com/sdw2330976/netty-learning/master/doc/wechatpay.jpeg" alt="上班的1990 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+      </div>
+
+    <footer class="post-footer">
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+              <a href="/Java并发/并发笔记之重入锁ReentrantLock分析/" rel="next" title="并发笔记之重入锁ReentrantLock分析">
+                <i class="fa fa-chevron-left"></i> 并发笔记之重入锁ReentrantLock分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+              <a href="/Java并发/并发笔记之CAS分析/" rel="prev" title="并发笔记之CAS分析">
+                并发笔记之CAS分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+  </div>
+
+
+          </div>
+          
+
+
+        </div>
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image"
+      src="https://nimg.ws.126.net/?url=https://nos.netease.com/relottery/user/20170222/OloRZG.jpeg"
+      alt="上班的1990">
+  <p class="site-author-name" itemprop="name">上班的1990</p>
+  <div class="site-description motion-element" itemprop="description">do something make yourself happy,such as coding.</div>
+</div>
+  <nav class="site-state motion-element">
+      <div class="site-state-item site-state-posts">
+        
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">32</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+    
+      
+      
+      <div class="site-state-item site-state-categories">
+        
+          
+            <a href="/categories/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分类</span>
+        </a>
+      </div>
+    
+      
+      
+      <div class="site-state-item site-state-tags">
+        
+          
+            <a href="/tags/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">标签</span>
+        </a>
+      </div>
+    
+  </nav>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+      
+      
+        
+      
+      
+        
+      
+        <a href="https://github.com/sdw2330976" title="GitHub &rarr; https://github.com/sdw2330976" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+    
+      <span class="links-of-author-item">
+      
+      
+        
+      
+      
+        
+      
+        <a href="https://weibo.com/1853131443" title="Weibo &rarr; https://weibo.com/1853131443" rel="noopener" target="_blank"><i class="fa fa-fw fa-weibo"></i>Weibo</a>
+      </span>
+    
+  </div>
+
+
+
+        </div>
+      </div>
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#操作系统语义"><span class="nav-number">1.</span> <span class="nav-text">操作系统语义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java内存模型"><span class="nav-number">2.</span> <span class="nav-text">Java内存模型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#原子性"><span class="nav-number">2.1.</span> <span class="nav-text">原子性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#可见性"><span class="nav-number">2.2.</span> <span class="nav-text">可见性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#有序性"><span class="nav-number">2.3.</span> <span class="nav-text">有序性</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#volatile原理"><span class="nav-number">3.</span> <span class="nav-text">volatile原理</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#指令重排序"><span class="nav-number">3.1.</span> <span class="nav-text">指令重排序</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#happens-before原则"><span class="nav-number">3.2.</span> <span class="nav-text">happens-before原则</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#volatile写-读建立的happens-before关系"><span class="nav-number">3.3.</span> <span class="nav-text">volatile写-读建立的happens-before关系</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#volatile-写-读的内存语义"><span class="nav-number">3.4.</span> <span class="nav-text">volatile 写-读的内存语义</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#volatile内存语义的实现"><span class="nav-number">3.5.</span> <span class="nav-text">volatile内存语义的实现</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2018 – <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">上班的1990</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.9.0</div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.2.0</div>
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+      </div>
+
+    
+
+  </div>
+
+  
+  <script src="/lib/jquery/index.js?v=3.4.1"></script>
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  <script src="/js/utils.js?v=7.2.0"></script>
+  <script src="/js/motion.js?v=7.2.0"></script>
+
+  
+  <script src="/js/affix.js?v=7.2.0"></script>
+  <script src="/js/schemes/pisces.js?v=7.2.0"></script>
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.2.0"></script>
+<script src="/js/post-details.js?v=7.2.0"></script>
+
+
+
+  <script src="/js/next-boot.js?v=7.2.0"></script>
+
+  
+
+  
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
