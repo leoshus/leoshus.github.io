@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://sdw2330976.github.io/life/%E5%91%8A%E5%88%AB2019%E5%B1%95%E6%9C%9B2020/</loc>
+    <lastmod>2020-01-07</lastmod>
+  </url>  <url>
+    <loc>https://sdw2330976.github.io/IO/Java-NIO/</loc>
+    <lastmod>2019-10-24</lastmod>
+  </url>  <url>
     <loc>https://sdw2330976.github.io/Java%E5%B9%B6%E5%8F%91/%E5%B9%B6%E5%8F%91%E7%AC%94%E8%AE%B0%E4%B9%8BSynchronized%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/</loc>
-    <lastmod>2019-09-16</lastmod>
+    <lastmod>2019-10-13</lastmod>
+  </url>  <url>
+    <loc>https://sdw2330976.github.io/Java%E5%B9%B6%E5%8F%91/%E5%B9%B6%E5%8F%91%E7%AC%94%E8%AE%B0%E4%B9%8Bvolatile%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/</loc>
+    <lastmod>2019-10-08</lastmod>
   </url>  <url>
     <loc>https://sdw2330976.github.io/Java%E9%9B%86%E5%90%88/ConcurrentHashMap/</loc>
     <lastmod>2019-08-25</lastmod>
@@ -16,13 +25,10 @@
     <loc>https://sdw2330976.github.io/Java%E5%B9%B6%E5%8F%91/%E5%B9%B6%E5%8F%91%E7%AC%94%E8%AE%B0%E4%B9%8BSemaphore%E5%88%86%E6%9E%90/</loc>
     <lastmod>2019-08-25</lastmod>
   </url>  <url>
-    <loc>https://sdw2330976.github.io/Java%E5%B9%B6%E5%8F%91/%E5%B9%B6%E5%8F%91%E7%AC%94%E8%AE%B0%E4%B9%8Bvolatile%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/</loc>
+    <loc>https://sdw2330976.github.io/Java%E5%B9%B6%E5%8F%91/%E5%B9%B6%E5%8F%91%E7%AC%94%E8%AE%B0%E4%B9%8BCountDownLatch%E5%88%86%E6%9E%90/</loc>
     <lastmod>2019-08-25</lastmod>
   </url>  <url>
     <loc>https://sdw2330976.github.io/Java%E5%B9%B6%E5%8F%91/%E5%B9%B6%E5%8F%91%E7%AC%94%E8%AE%B0%E4%B9%8BCAS%E5%88%86%E6%9E%90/</loc>
-    <lastmod>2019-08-25</lastmod>
-  </url>  <url>
-    <loc>https://sdw2330976.github.io/Java%E5%B9%B6%E5%8F%91/%E5%B9%B6%E5%8F%91%E7%AC%94%E8%AE%B0%E4%B9%8BCountDownLatch%E5%88%86%E6%9E%90/</loc>
     <lastmod>2019-08-25</lastmod>
   </url>  <url>
     <loc>https://sdw2330976.github.io/Java%E5%B9%B6%E5%8F%91/%E5%B9%B6%E5%8F%91%E7%AC%94%E8%AE%B0%E4%B9%8BAQS%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/</loc>
@@ -67,10 +73,10 @@
     <loc>https://sdw2330976.github.io/Java%E9%9B%86%E5%90%88/HashMap/</loc>
     <lastmod>2019-08-10</lastmod>
   </url>  <url>
-    <loc>https://sdw2330976.github.io/Java%E9%9B%86%E5%90%88/CopyOnWriteArrayList/</loc>
+    <loc>https://sdw2330976.github.io/Java%E9%9B%86%E5%90%88/DelayQueue/</loc>
     <lastmod>2019-08-10</lastmod>
   </url>  <url>
-    <loc>https://sdw2330976.github.io/Java%E9%9B%86%E5%90%88/DelayQueue/</loc>
+    <loc>https://sdw2330976.github.io/Java%E9%9B%86%E5%90%88/CopyOnWriteArrayList/</loc>
     <lastmod>2019-08-10</lastmod>
   </url>  <url>
     <loc>https://sdw2330976.github.io/Java%E9%9B%86%E5%90%88/ConcurrentLinkedQueue/</loc>

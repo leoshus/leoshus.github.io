@@ -65,12 +65,13 @@
 <meta property="og:site_name" content="shang&#39;s Blog">
 <meta property="og:description" content="初识java解决线程并发问题，首先想到的可能就是synchronized关键字，操作简单；但相对于Lock，synchronized是一个重量级锁 并不是那么高效但JDK1.6对其进行了各种优化后，性能有了很大提升。那么synchronized的实现机制是什么？JDK是如果对它进行优化以及锁优化机制、锁的存储结构和升级过程是什么样的呢？">
 <meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://sdw2330976.github.io/Java并发/并发笔记之Synchronized实现原理/objectmonitor.png">
 <meta property="og:image" content="https://sdw2330976.github.io/Java并发/并发笔记之Synchronized实现原理/ObjectHead.png">
-<meta property="og:updated_time" content="2019-09-16T14:34:49.426Z">
+<meta property="og:updated_time" content="2019-10-13T05:04:39.103Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="并发笔记之Synchronized实现原理">
 <meta name="twitter:description" content="初识java解决线程并发问题，首先想到的可能就是synchronized关键字，操作简单；但相对于Lock，synchronized是一个重量级锁 并不是那么高效但JDK1.6对其进行了各种优化后，性能有了很大提升。那么synchronized的实现机制是什么？JDK是如果对它进行优化以及锁优化机制、锁的存储结构和升级过程是什么样的呢？">
-<meta name="twitter:image" content="https://sdw2330976.github.io/Java并发/并发笔记之Synchronized实现原理/ObjectHead.png">
+<meta name="twitter:image" content="https://sdw2330976.github.io/Java并发/并发笔记之Synchronized实现原理/objectmonitor.png">
   <link rel="canonical" href="https://sdw2330976.github.io/Java并发/并发笔记之Synchronized实现原理/">
 
 
@@ -288,7 +289,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2019-09-16 22:34:49" itemprop="dateModified" datetime="2019-09-16T22:34:49+08:00">2019-09-16</time>
+                <time title="修改时间：2019-10-13 13:04:39" itemprop="dateModified" datetime="2019-10-13T13:04:39+08:00">2019-10-13</time>
               </span>
             
           
@@ -344,7 +345,10 @@
 <li>Mark Word(标记字段):存储对象自身的运行时数据 它是现实轻量级锁和偏向锁的关键</li>
 <li>Klass Pointer(类型指针):对象指向其类元素据的指针 虚拟机通过这个指针来判断对象是哪个类的实例</li>
 </ol>
-<h3 id="Mark-Word"><a href="#Mark-Word" class="headerlink" title="Mark Word"></a>Mark Word</h3><p>Mark Word存储的对象运行时数据，如哈希码(HashCode)、垃圾回收分代年龄、线程持有的锁、锁状态标志、偏向线程ID、偏向时间戳等。Java对象头一般占有两个机器码(32位虚拟机中，1个机器码等于4个字节，<br>也就是32bit)，但如果是数组则需要三个机器码，因为JVM可以通过Java对象的元数据信息确定Java对象的大小，但是无法从数组的元数据来确定数组大小，故用一块单独的内存记录数组长度。<br>Java对象头存储结构如下(32we)：</p>
+<img src="/Java并发/并发笔记之Synchronized实现原理/objectmonitor.png">
+<p>当我们在Java代码中，使用new创建一个对象实例的时候，（hotspot虚拟机）JVM层面实际上会创建一个 instanceOopDesc对象。<br>Hotspot虚拟机采用OOP-Klass模型来描述Java对象实例，OOP(Ordinary Object Point)指的是普通对象指针，Klass用来描述对象实例的具体类型。Hotspot采用instanceOopDesc和arrayOopDesc来描述对象头，arrayOopDesc对象用来描述数组类型<br>instanceOopDesc的定义在Hotspot源码中的 instanceOop.hpp文件中，另外，arrayOopDesc的定义对应 arrayOop.hpp<br>从instanceOopDesc代码中可以看到 instanceOopDesc继承自oopDesc，oopDesc的定义载Hotspot源码中的 oop.hpp文件中<br>在普通实例对象中，oopDesc的定义包含两个成员，分别是 _mark和 _metadata<br>_mark表示对象标记、属于markOop类型，也就是接下来要讲解的Mark World，它记录了对象和锁有关的信息<br>_metadata表示类元信息，类元信息存储的是对象指向它的类元数据(Klass)的首地址，其中Klass表示普通指针、 _compressed_klass表示压缩类指针</p>
+<h3 id="Mark-Word"><a href="#Mark-Word" class="headerlink" title="Mark Word"></a>Mark Word</h3><p>普通对象的对象头由两部分组成，分别是markOop以及类元信息，markOop官方称为Mark Word 在Hotspot中，markOop的定义在 markOop.hpp文件中，代码如下<br>Mark word记录了对象和锁有关的信息，当某个对象被synchronized关键字当成同步锁时，那么围绕这个锁的一系列操作都和Mark word有关系。Mark Word在32位虚拟机的长度是32bit、在64位虚拟机的长度是64bit。</p>
+<p>Mark Word存储的对象运行时数据，如哈希码(HashCode)、垃圾回收分代年龄、线程持有的锁、锁状态标志、偏向线程ID、偏向时间戳等。Java对象头一般占有两个机器码(32位虚拟机中，1个机器码等于4个字节，<br>也就是32bit)，但如果是数组则需要三个机器码，因为JVM可以通过Java对象的元数据信息确定Java对象的大小，但是无法从数组的元数据来确定数组大小，故用一块单独的内存记录数组长度。<br>Java对象头存储结构如下(32位)：</p>
 <table>
 <thead>
 <tr>
@@ -365,7 +369,44 @@
 </table>
 <p>对象头信息是与对象自身定义的数据无关的额外存储成本，但考虑到虚拟机的空间效率，Mark Word被设计成一个非固定地的数据结构以便在极小的空间内存存储尽量多的数据，它会根据对象的状态复用自己的存储空间，<br>也就是，Mark Word会根据程序运行的变化，变化状态如下(32位虚拟机)：</p>
 <img src="/Java并发/并发笔记之Synchronized实现原理/ObjectHead.png">
-<h3 id="Monitor"><a href="#Monitor" class="headerlink" title="Monitor"></a>Monitor</h3><h3 id="锁优化"><a href="#锁优化" class="headerlink" title="锁优化"></a>锁优化</h3><p>JVM中<code>monitorenter</code>和<code>moniterexit</code>字节码指令依赖于底层的操作系统<code>mutex lock</code>实现，但<code>mutex lock</code>需要将当前线程挂起并从用户态切换到内核态来执行，切换代价比较高昂。<br>实际使用过程中，大部分情况下同步方法是运行在单线程环境若每次都调用<code>mutex lock</code>将严重影响性能。好在JDK1.6对锁的实现引入了大量的优化,来减少锁操作的开销：</p>
+<h3 id="Monitor"><a href="#Monitor" class="headerlink" title="Monitor"></a>Monitor</h3><p>通过字节码我们可以发现，修饰在方法层面的同步关键字，会多一个 ACC_SYNCHRONIZED的flag；修饰在代码块层面的同步块会多一个 monitorenter和 monitorexit关键字。无论采用哪一种方式，本质上都是对一个对象的监视器(monitor)进行获取，而这个获取的过程是排他的，也就是同一个时刻只能有一个线程获得同步块对象的监视器。<br>synchronized关键字经过编译之后，会在同步块的前后分别形成monitorenter和monitorexit这两个字节码指令。当我们的JVM把字节码加载到内存的时候，会对这两个指令进行解析。这两个字节码都需要一个Object类型的参数来指明要锁定和解锁的对象。如果Java程序中的synchronized明确指定了对象参数，那么这个对象就是加锁和解锁的对象；如果没有明确指定，那就根据synchronized修饰的是实例方法还是类方法，获取对应的对象实例或Class对象来作为锁对象</p>
+<p>其实前面只提到了锁标志位的存储，但是为什么任意一个Java对象都能成为锁对象呢？<br>首先，Java中的每个对象都派生自Object类，而每个Java Object在JVM内部都有一个native的C++对象 oop/oopDesc进行对应。<br>其次，线程在获取锁的时候，实际上就是获得一个监视器对象(monitor) ,monitor可以认为是一个同步对象，所有的Java对象是天生携带monitor.<br>在hotspot源码的 markOop.hpp文件中<br>多个线程访问同步代码块时，相当于去争抢对象监视器修改对象中的锁标识,上面的代码中ObjectMonitor这个对象和线程争抢锁的逻辑有密切的关系(后续会详细分析)</p>
+<h3 id="锁升级"><a href="#锁升级" class="headerlink" title="锁升级"></a>锁升级</h3><p>在JDK1.6之前，synchronized是一个重量级锁，性能比较差。从JDK1.6开始，为了减少获得锁和释放锁带来的性能消耗，synchronized进行了优化，引入了 偏向锁和 轻量级锁的概念。所以从JDK1.6开始，锁一共会有四种状态，锁的状态根据竞争激烈程度从低到高分别是:无锁状态-&gt;偏向锁状态-&gt;轻量级锁状态-&gt;重量级锁状态。这几个状态会随着锁竞争的情况逐步升级。为了提高获得锁和释放锁的效率，锁可以升级但是不能降级。</p>
+<h4 id="偏向锁"><a href="#偏向锁" class="headerlink" title="偏向锁"></a>偏向锁</h4><p>在大多数的情况下，锁不仅不存在多线程的竞争，而且总是由同一个线程获得。因此为了让线程获得锁的代价更低引入了偏向锁的概念。偏向锁的意思是如果一个线程获得了一个偏向锁，如果在接下来的一段时间中没有其他线程来竞争锁，那么持有偏向锁的线程再次进入或者退出同一个同步代码块，不需要再次进行抢占锁和释放锁的操作。偏向锁可以通过 -XX:+UseBiasedLocking开启或者关闭</p>
+<h5 id="偏向锁获取"><a href="#偏向锁获取" class="headerlink" title="偏向锁获取"></a>偏向锁获取</h5><p>偏向锁的获取过程非常简单，当一个线程访问同步块获取锁时，会在对象头和栈帧中的锁记录里存储偏向锁的线程ID，表示哪个线程获得了偏向锁，结合前面分析的Mark Word来分析一下偏向锁的获取逻辑</p>
+<ul>
+<li>首先获取目标对象的Mark Word，根据锁的标识为和epoch去判断当前是否处于可偏向的状态</li>
+<li>如果为可偏向状态，则通过CAS操作将自己的线程ID写入到MarkWord，如果CAS操作成功，则表示当前线程成功获取到偏向锁，继续执行同步代码块</li>
+<li>如果是已偏向状态，先检测MarkWord中存储的threadID和当前访问的线程的threadID是否相等，如果相等，表示当前线程已经获得了偏向锁，则不需要再获得锁直接执行同步代码；如果不相等，则证明当前锁偏向于其他线程，需要撤销偏向锁。</li>
+</ul>
+<blockquote>
+<p>CAS:表示自旋锁，由于线程的阻塞和唤醒需要CPU从用户态转为核心态，频繁的阻塞和唤醒对CPU来说性能开销很大。同时，很多对象锁的锁定状态指会持续很短的时间，因此引入了自旋锁，所谓自旋就是一个无意义的死循环，在循环体内不断的重行竞争锁。当然，自旋的次数会有限制，超出指定的限制会升级到阻塞锁。</p>
+</blockquote>
+<h5 id="偏向锁撤销"><a href="#偏向锁撤销" class="headerlink" title="偏向锁撤销"></a>偏向锁撤销</h5><p>当其他线程尝试竞争偏向锁时，持有偏向锁的线程才会释放偏向锁，撤销偏向锁的过程需要等待一个全局安全点(所有工作线程都停止字节码的执行)。</p>
+<ul>
+<li>首先，暂停拥有偏向锁的线程，然后检查偏向锁的线程是否为存活状态</li>
+<li>如果线程已经死了，直接把对象头设置为无锁状态</li>
+<li>如果还活着，当达到全局安全点时获得偏向锁的线程会被挂起，接着偏向锁升级为轻量级锁，然后唤醒被阻塞在全局安全点的线程继续往下执行同步代码</li>
+</ul>
+<h4 id="轻量级锁"><a href="#轻量级锁" class="headerlink" title="轻量级锁"></a>轻量级锁</h4><p>当存在超过一个线程在竞争同一个同步代码块时，会发生偏向锁的撤销。偏向锁撤销以后对象会可能会处于两种状态</p>
+<ul>
+<li>一种是不可偏向的无锁状态，简单来说就是已经获得偏向锁的线程已经退出了同步代码块，那么这个时候会撤销偏向锁，并升级为轻量级锁</li>
+<li>一种是不可偏向的已锁状态，简单来说就是已经获得偏向锁的线程正在执行同步代码块，那么这个时候会升级到轻量级锁并且被原持有锁的线程获得锁</li>
+</ul>
+<h5 id="轻量级锁加锁"><a href="#轻量级锁加锁" class="headerlink" title="轻量级锁加锁"></a>轻量级锁加锁</h5><ul>
+<li>JVM会先在当前线程的栈帧中创建用于存储锁记录的空间(LockRecord)</li>
+<li>将对象头中的Mark Word复制到锁记录中，称为Displaced Mark Word.</li>
+<li>线程尝试使用CAS将对象头中的Mark Word替换为指向锁记录的指针</li>
+<li>如果替换成功，表示当前线程获得轻量级锁，如果失败，表示存在其他线程竞争锁，那么当前线程会尝试使用CAS来获取锁，当自旋超过指定次数(可以自定义)时仍然无法获得锁，此时锁会膨胀升级为重量级锁</li>
+</ul>
+<h5 id="轻量级锁解锁"><a href="#轻量级锁解锁" class="headerlink" title="轻量级锁解锁"></a>轻量级锁解锁</h5><ul>
+<li>尝试CAS操作将所记录中的Mark Word替换回到对象头中</li>
+<li>如果成功，表示没有竞争发生</li>
+<li>如果失败，表示当前锁存在竞争，锁会膨胀成重量级锁</li>
+</ul>
+<h4 id="重量级锁"><a href="#重量级锁" class="headerlink" title="重量级锁"></a>重量级锁</h4><p>重量级锁依赖对象内部的monitor锁来实现，而monitor又依赖操作系统的MutexLock（互斥锁）<br>假设Mutex变量的值为1，表示互斥锁空闲，这个时候某个线程调用lock可以获得锁，而Mutex的值为0表示互斥锁已经被其他线程获得，其他线程调用lock只能挂起等待</p>
+<p>为什么重量级锁的开销比较大呢？<br>原因是当系统检查到是重量级锁之后，会把等待想要获取锁的线程阻塞，被阻塞的线程不会消耗CPU，但是阻塞或者唤醒一个线程，都需要通过操作系统来实现，也就是相当于从用户态转化到内核态，而转化状态是需要消耗时间的</p>
+<h3 id="锁优化"><a href="#锁优化" class="headerlink" title="锁优化"></a>锁优化</h3><p>JVM中<code>monitorenter</code>和<code>moniterexit</code>字节码指令依赖于底层的操作系统<code>mutex lock</code>实现，但<code>mutex lock</code>需要将当前线程挂起并从用户态切换到内核态来执行，切换代价比较高昂。<br>实际使用过程中，大部分情况下同步方法是运行在单线程环境若每次都调用<code>mutex lock</code>将严重影响性能。好在JDK1.6对锁的实现引入了大量的优化,来减少锁操作的开销：</p>
 <ol>
 <li>锁粗化(lock coarsening)<br>将不必要的连续的lock、unlock操作扩展成一个更大范围的锁</li>
 <li>锁消除(lock elimination)<br>通过运行时JIT编译器的逃逸分析来消除一些没有在当前同步块以外被其他线程共享的数据的锁保护</li>
@@ -373,6 +414,9 @@
 <li>偏向锁(biased locking)</li>
 <li>适应性自旋锁(adaptive spinning)</li>
 </ol>
+<blockquote>
+<p><a href="https://mp.weixin.qq.com/s/moPPjs-A4ZAUxamMMTOeKQ" target="_blank" rel="noopener">synchronized的源码分析</a></p>
+</blockquote>
 
     </div>
 
@@ -475,7 +519,7 @@
         
           <a href="/archives/">
         
-          <span class="site-state-item-count">32</span>
+          <span class="site-state-item-count">34</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -532,7 +576,25 @@
         
           
         
-        <span class="site-state-item-count">4</span>
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">6</span>
         <span class="site-state-item-name">分类</span>
         </a>
       </div>
@@ -583,7 +645,11 @@
         
           
         
-        <span class="site-state-item-count">12</span>
+          
+        
+          
+        
+        <span class="site-state-item-count">13</span>
         <span class="site-state-item-name">标签</span>
         </a>
       </div>
@@ -628,7 +694,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#实现原理"><span class="nav-number">1.</span> <span class="nav-text">实现原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java对象模型"><span class="nav-number">2.</span> <span class="nav-text">Java对象模型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#OPP-Klass-Model"><span class="nav-number">2.1.</span> <span class="nav-text">OPP-Klass Model</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对象头"><span class="nav-number">3.</span> <span class="nav-text">对象头</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Mark-Word"><span class="nav-number">4.</span> <span class="nav-text">Mark Word</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Monitor"><span class="nav-number">5.</span> <span class="nav-text">Monitor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#锁优化"><span class="nav-number">6.</span> <span class="nav-text">锁优化</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#实现原理"><span class="nav-number">1.</span> <span class="nav-text">实现原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java对象模型"><span class="nav-number">2.</span> <span class="nav-text">Java对象模型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#OPP-Klass-Model"><span class="nav-number">2.1.</span> <span class="nav-text">OPP-Klass Model</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对象头"><span class="nav-number">3.</span> <span class="nav-text">对象头</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Mark-Word"><span class="nav-number">4.</span> <span class="nav-text">Mark Word</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Monitor"><span class="nav-number">5.</span> <span class="nav-text">Monitor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#锁升级"><span class="nav-number">6.</span> <span class="nav-text">锁升级</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#偏向锁"><span class="nav-number">6.1.</span> <span class="nav-text">偏向锁</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#偏向锁获取"><span class="nav-number">6.1.1.</span> <span class="nav-text">偏向锁获取</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#偏向锁撤销"><span class="nav-number">6.1.2.</span> <span class="nav-text">偏向锁撤销</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#轻量级锁"><span class="nav-number">6.2.</span> <span class="nav-text">轻量级锁</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#轻量级锁加锁"><span class="nav-number">6.2.1.</span> <span class="nav-text">轻量级锁加锁</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#轻量级锁解锁"><span class="nav-number">6.2.2.</span> <span class="nav-text">轻量级锁解锁</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#重量级锁"><span class="nav-number">6.3.</span> <span class="nav-text">重量级锁</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#锁优化"><span class="nav-number">7.</span> <span class="nav-text">锁优化</span></a></li></ol></div>
             
 
           </div>
@@ -646,7 +712,7 @@
 
     <footer id="footer" class="footer">
       <div class="footer-inner">
-        <div class="copyright">&copy; 2018 – <span itemprop="copyrightYear">2019</span>
+        <div class="copyright">&copy; 2018 – <span itemprop="copyrightYear">2020</span>
   <span class="with-love" id="animate">
     <i class="fa fa-user"></i>
   </span>

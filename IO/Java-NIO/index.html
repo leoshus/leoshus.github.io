@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+
+
+
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="generator" content="Hexo 3.9.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.2.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/myicon-32x32.png?v=7.2.0">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/myicon-16x16.png?v=7.2.0">
+  <link rel="mask-icon" href="/images/logo.svg?v=7.2.0" color="#222">
+
+<link rel="stylesheet" href="/css/main.css?v=7.2.0">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.2.0',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    search: {
+      root: '/',
+      path: 'search.xml'
+    },
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    }
+  };
+</script>
+
+  <meta name="description" content="距离上次看nio相关知识想来也快一年了，感觉对于nio的理解总是停留在IO复用的io模型，知其然但不知其所以然，故而今天来解开Java NIO的神秘面纱。">
+<meta name="keywords" content="IO">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java NIO">
+<meta property="og:url" content="https://sdw2330976.github.io/IO/Java-NIO/index.html">
+<meta property="og:site_name" content="shang&#39;s Blog">
+<meta property="og:description" content="距离上次看nio相关知识想来也快一年了，感觉对于nio的理解总是停留在IO复用的io模型，知其然但不知其所以然，故而今天来解开Java NIO的神秘面纱。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://sdw2330976.github.io/IO/Java-NIO/buffers-modes.png">
+<meta property="og:image" content="https://sdw2330976.github.io/IO/Java-NIO/tcp-shake.png">
+<meta property="og:updated_time" content="2019-10-24T14:28:26.525Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Java NIO">
+<meta name="twitter:description" content="距离上次看nio相关知识想来也快一年了，感觉对于nio的理解总是停留在IO复用的io模型，知其然但不知其所以然，故而今天来解开Java NIO的神秘面纱。">
+<meta name="twitter:image" content="https://sdw2330976.github.io/IO/Java-NIO/buffers-modes.png">
+  <link rel="canonical" href="https://sdw2330976.github.io/IO/Java-NIO/">
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Java NIO | shang's Blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">shang's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">不开心的根源在于读书太多而自由太少</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+    <ul id="menu" class="menu">
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+      
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br/>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+      
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br/>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+      
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br/>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+      
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br/>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+      
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br/>归档</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-sitemap">
+      
+    
+
+    <a href="/sitemap.xml" rel="section"><i class="menu-item-icon fa fa-fw fa-sitemap"></i> <br/>站点地图</a>
+
+  </li>
+    </ul>
+</nav>
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+            
+
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://sdw2330976.github.io/IO/Java-NIO/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="上班的1990">
+      <meta itemprop="description" content="do something make yourself happy,such as coding.">
+      <meta itemprop="image" content="https://nimg.ws.126.net/?url=https://nos.netease.com/relottery/user/20170222/OloRZG.jpeg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="shang's Blog">
+    </span>
+      <header class="post-header">
+
+        
+          <h1 class="post-title" itemprop="name headline">Java NIO
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-04-04 16:49:20" itemprop="dateCreated datePublished" datetime="2019-04-04T16:49:20+08:00">2019-04-04</time>
+            </span>
+          
+            
+
+            
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-10-24 22:28:26" itemprop="dateModified" datetime="2019-10-24T22:28:26+08:00">2019-10-24</time>
+              </span>
+            
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/IO/" itemprop="url" rel="index"><span itemprop="name">IO</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          <br/>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>距离上次看nio相关知识想来也快一年了，感觉对于nio的理解总是停留在IO复用的io模型，知其然但不知其所以然，故而今天来解开Java NIO的神秘面纱。<br><a id="more"></a><br>首先来回顾下NIO基本概念，Java NIO主要由Buffer、Channel、Selector三大组件组成。其他组件比如Pipe、FileLock只不过是这三个组件的公共工具类。<br>Buffer是与NIO Channel交互的载体，提供了一系列便于操作内存块的方法。读数据是从Channel读取到Buffer中，写数据是从Buffer写入到Channel。<br>使用Buffer进行读写数据通常需要4步：<br>将数据写入到Buffer</p>
+<ul>
+<li>调用buffer.flip()</li>
+<li>从Buffer中读取数据</li>
+<li>调用buffer.clear()或者buffer.compact()</li>
+</ul>
+<img src="/IO/Java-NIO/buffers-modes.png">
+<p>TCP/IP 三次握手</p>
+<img src="/IO/Java-NIO/tcp-shake.png">
+<p>Java NIO API基本原理<br><code>Selector.open</code> -&gt; Pipe.open 创建一个Selector实例 初始化Selector(windows为WindowsSelectorImpl Linux为PollSelectorImpl) Selector同时会初始化并持有<code>PollArrayWapper</code>类<br>(功能近似于一个数组，保存注册的Socket句柄、感兴趣的事件掩码以及调用系统调用poll后的返回的就绪事件掩码)<br><code>ServerSocketChannel.open</code> 初始化channel，构造<code>ServerSocketChannelImpl</code> 对象<br><code>ServerSocketChannel.register</code> 注册需要监听的通道 将channel(socket)以及感兴趣的事件注册到<code>pollArray</code>中</p>
+<p><code>Selector.select</code> 获取已经就绪的通道</p>
+<p>以Linux为例：</p>
+<h2 id="Selector-open"><a href="#Selector-open" class="headerlink" title="Selector.open"></a><code>Selector.open</code></h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Selector <span class="title">open</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> SelectorProvider.provider().openSelector();</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>从上可知<code>Selecotr</code>是由<code>SelectorProvider.openSelector</code>提供。则要初始化Selector必须先拿到SelectorProvier。</p>
+<h3 id="获取SelectorProvider"><a href="#获取SelectorProvider" class="headerlink" title="获取SelectorProvider"></a>获取SelectorProvider</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> SelectorProvider <span class="title">provider</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (lock) &#123;</span><br><span class="line">        <span class="keyword">if</span> (provider != <span class="keyword">null</span>)</span><br><span class="line">            <span class="keyword">return</span> provider;</span><br><span class="line">        <span class="keyword">return</span> AccessController.doPrivileged(</span><br><span class="line">            <span class="keyword">new</span> PrivilegedAction&lt;SelectorProvider&gt;() &#123;</span><br><span class="line">                <span class="function"><span class="keyword">public</span> SelectorProvider <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                        <span class="keyword">if</span> (loadProviderFromProperty())</span><br><span class="line">                            <span class="keyword">return</span> provider;</span><br><span class="line">                        <span class="keyword">if</span> (loadProviderAsService())</span><br><span class="line">                            <span class="keyword">return</span> provider;</span><br><span class="line">                        provider = sun.nio.ch.DefaultSelectorProvider.create();</span><br><span class="line">                        <span class="keyword">return</span> provider;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>通过获取系统变量<code>java.nio.channels.spi.SelectorProvider</code>的方式获取SelectorProvider</li>
+<li>通过SPI扩展加载获取SelectorProvider</li>
+<li>通过<code>sun.nio.ch.DefaultSelectorProvider.create()</code>获取</li>
+</ol>
+<h3 id="不一样的DefaultSelectorProvider"><a href="#不一样的DefaultSelectorProvider" class="headerlink" title="不一样的DefaultSelectorProvider"></a>不一样的DefaultSelectorProvider</h3><p>通过阅读JDK源码 我们可以找到<code>linux</code>、<code>macosx</code>、<code>windows</code>三个版本的实现</p>
+<ul>
+<li><p>linux版本：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultSelectorProvider</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Prevent instantiation.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">DefaultSelectorProvider</span><span class="params">()</span> </span>&#123; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@SuppressWarnings</span>(<span class="string">"unchecked"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> SelectorProvider <span class="title">createProvider</span><span class="params">(String cn)</span> </span>&#123;</span><br><span class="line">        Class&lt;SelectorProvider&gt; c;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            c = (Class&lt;SelectorProvider&gt;)Class.forName(cn);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ClassNotFoundException x) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> AssertionError(x);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> c.newInstance();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IllegalAccessException | InstantiationException x) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> AssertionError(x);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Returns the default SelectorProvider.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> SelectorProvider <span class="title">create</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        String osname = AccessController</span><br><span class="line">            .doPrivileged(<span class="keyword">new</span> GetPropertyAction(<span class="string">"os.name"</span>));</span><br><span class="line">        <span class="keyword">if</span> (osname.equals(<span class="string">"SunOS"</span>))</span><br><span class="line">            <span class="keyword">return</span> createProvider(<span class="string">"sun.nio.ch.DevPollSelectorProvider"</span>);</span><br><span class="line">        <span class="keyword">if</span> (osname.equals(<span class="string">"Linux"</span>))</span><br><span class="line">            <span class="keyword">return</span> createProvider(<span class="string">"sun.nio.ch.EPollSelectorProvider"</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> sun.nio.ch.PollSelectorProvider();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>macosx版本：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultSelectorProvider</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Prevent instantiation.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">DefaultSelectorProvider</span><span class="params">()</span> </span>&#123; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Returns the default SelectorProvider.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> SelectorProvider <span class="title">create</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> sun.nio.ch.KQueueSelectorProvider();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>windows版本：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultSelectorProvider</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Prevent instantiation.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">DefaultSelectorProvider</span><span class="params">()</span> </span>&#123; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Returns the default SelectorProvider.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> SelectorProvider <span class="title">create</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> sun.nio.ch.WindowsSelectorProvider();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>以Linux为例 我们来接着一探究竟，通过源码可知Linux使用的Provider为：<code>EPollSelectorProvider</code></p>
+<h3 id="EPollSelectorProvider"><a href="#EPollSelectorProvider" class="headerlink" title="EPollSelectorProvider"></a>EPollSelectorProvider</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EPollSelectorProvider</span></span></span><br><span class="line"><span class="class">    <span class="keyword">extends</span> <span class="title">SelectorProviderImpl</span></span></span><br><span class="line"><span class="class"></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> AbstractSelector <span class="title">openSelector</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> EPollSelectorImpl(<span class="keyword">this</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Channel <span class="title">inheritedChannel</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> InheritedChannel.getChannel();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>显然Linux下 <code>Selector selector = Selector.open()</code>最终初始化了一个<code>EPollSelectorImpl</code>对象</p>
+</li>
+</ul>
+<h3 id="Selector的真身EPollSelectorImpl"><a href="#Selector的真身EPollSelectorImpl" class="headerlink" title="Selector的真身EPollSelectorImpl"></a>Selector的真身EPollSelectorImpl</h3><p>EPollSelectorImpl初始化过程，会建立一个管道pipe 并初始化一个EPollArrayWrapper数组保存pollfd， 并初始化一个维持文件描述符与<code>SelectorKeyImpl</code>映射关系的map</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">EPollSelectorImpl(SelectorProvider sp) <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">    <span class="keyword">super</span>(sp);</span><br><span class="line">    <span class="comment">//1.建立一个管道Pipe 读端fd在高32位 写端fd在低32位</span></span><br><span class="line">    <span class="keyword">long</span> pipeFds = IOUtil.makePipe(<span class="keyword">false</span>);</span><br><span class="line">    fd0 = (<span class="keyword">int</span>) (pipeFds &gt;&gt;&gt; <span class="number">32</span>);</span><br><span class="line">    fd1 = (<span class="keyword">int</span>) pipeFds;</span><br><span class="line">    <span class="comment">//2.初始化一个EPollArrayWrapper 本质上是pollfd数组</span></span><br><span class="line">    pollWrapper = <span class="keyword">new</span> EPollArrayWrapper();</span><br><span class="line">    <span class="comment">//3.将读端fd添加到PollArrayWrapper的fd数组中</span></span><br><span class="line">    pollWrapper.initInterrupt(fd0, fd1);</span><br><span class="line">    <span class="comment">//4.初始化文件描述符到SelectorKey映射的map</span></span><br><span class="line">    <span class="comment">//private Map&lt;Integer,SelectionKeyImpl&gt; fdToKey;</span></span><br><span class="line">    fdToKey = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="关键的EPollArrayWrapper"><a href="#关键的EPollArrayWrapper" class="headerlink" title="关键的EPollArrayWrapper"></a>关键的EPollArrayWrapper</h3><p>EPollArrayWrapper实际通过JNI操作本地<code>epoll_event</code>的数据结构，其定义如下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">union</span> epoll_data &#123;</span><br><span class="line"> <span class="keyword">void</span> *ptr;</span><br><span class="line"> <span class="keyword">int</span> fd;</span><br><span class="line"> <span class="keyword">__uint32_t</span> u32;</span><br><span class="line"> <span class="keyword">__uint64_t</span> u64;</span><br><span class="line">&#125; <span class="keyword">epoll_data_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span> &#123;</span></span><br><span class="line"> <span class="keyword">__uint32_t</span> events;</span><br><span class="line"> <span class="keyword">epoll_data_t</span> data;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">EPollArrayWrapper初始化构造器，首先创建epoll的数据结构，并进行内存申请分配</span><br><span class="line"></span><br><span class="line">EPollArrayWrapper() <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">    <span class="comment">// creates the epoll file descriptor</span></span><br><span class="line">    epfd = epollCreate();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// the epoll_event array passed to epoll_wait</span></span><br><span class="line">    <span class="keyword">int</span> allocationSize = NUM_EPOLLEVENTS * SIZE_EPOLLEVENT;</span><br><span class="line">    pollArray = <span class="keyword">new</span> AllocatedNativeObject(allocationSize, <span class="keyword">true</span>);</span><br><span class="line">    pollArrayAddress = pollArray.address();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// eventHigh needed when using file descriptors &gt; 64k</span></span><br><span class="line">    <span class="keyword">if</span> (OPEN_MAX &gt; MAX_UPDATE_ARRAY_SIZE)</span><br><span class="line">        eventsHigh = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="epollCreate"><a href="#epollCreate" class="headerlink" title="epollCreate()"></a>epollCreate()</h4><p>epollCreate通过JNI调用系统方法<code>epoll_create</code> 并返回句柄 完成epoll的初始化工作<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">JNIEXPORT jint JNICALL</span><br><span class="line">Java_sun_nio_ch_EPollArrayWrapper_epollCreate(JNIEnv *env, jobject <span class="keyword">this</span>)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * epoll_create expects a size as a hint to the kernel about how to</span></span><br><span class="line"><span class="comment">     * dimension internal structures. We can't predict the size in advance.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">int</span> epfd = epoll_create(<span class="number">256</span>);</span><br><span class="line">    <span class="keyword">if</span> (epfd &lt; <span class="number">0</span>) &#123;</span><br><span class="line">       JNU_ThrowIOExceptionWithLastError(env, <span class="string">"epoll_create failed"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> epfd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>在上面EpollSelectorImpl初始化过程中，我们看到<code>pollWrapper.initInterrupt(fd0, fd1);</code>的调用<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">initInterrupt</span><span class="params">(<span class="keyword">int</span> fd0, <span class="keyword">int</span> fd1)</span> </span>&#123;</span><br><span class="line">    outgoingInterruptFD = fd1;</span><br><span class="line">    incomingInterruptFD = fd0;</span><br><span class="line">    epollCtl(epfd, EPOLL_CTL_ADD, fd0, EPOLLIN);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">JNIEXPORT <span class="keyword">void</span> JNICALL</span><br><span class="line">Java_sun_nio_ch_EPollArrayWrapper_epollCtl(JNIEnv *env, jobject <span class="keyword">this</span>, jint epfd,</span><br><span class="line">                                           jint opcode, jint fd, jint events)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span> <span class="title">event</span>;</span></span><br><span class="line">    <span class="keyword">int</span> res;</span><br><span class="line"></span><br><span class="line">    event.events = events;</span><br><span class="line">    event.data.fd = fd;</span><br><span class="line"></span><br><span class="line">    RESTARTABLE(epoll_ctl(epfd, (<span class="keyword">int</span>)opcode, (<span class="keyword">int</span>)fd, &amp;event), res);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * A channel may be registered with several Selectors. When each Selector</span></span><br><span class="line"><span class="comment">     * is polled a EPOLL_CTL_DEL op will be inserted into its pending update</span></span><br><span class="line"><span class="comment">     * list to remove the file descriptor from epoll. The "last" Selector will</span></span><br><span class="line"><span class="comment">     * close the file descriptor which automatically unregisters it from each</span></span><br><span class="line"><span class="comment">     * epoll descriptor. To avoid costly synchronization between Selectors we</span></span><br><span class="line"><span class="comment">     * allow pending updates to be processed, ignoring errors. The errors are</span></span><br><span class="line"><span class="comment">     * harmless as the last update for the file descriptor is guaranteed to</span></span><br><span class="line"><span class="comment">     * be EPOLL_CTL_DEL.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (res &lt; <span class="number">0</span> &amp;&amp; errno != EBADF &amp;&amp; errno != ENOENT &amp;&amp; errno != EPERM) &#123;</span><br><span class="line">        JNU_ThrowIOExceptionWithLastError(env, <span class="string">"epoll_ctl failed"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>而epollCtl实际通过JNI调用了系统方法<code>epoll_ctl(epfd, (int)opcode, (int)fd, &amp;event)</code> 来将需要监听的句柄加入到epoll的数据结构中<br><code>epoll_ctl</code>函数用于管理文件描述符的事件集 使用此函数可以注册、修改、删除一个或多个事件</p>
+<h2 id="Selector-select"><a href="#Selector-select" class="headerlink" title="Selector.select()"></a>Selector.select()</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">select</span><span class="params">(<span class="keyword">long</span> timeout)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> IOException</span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (timeout &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Negative timeout"</span>);</span><br><span class="line">    <span class="keyword">return</span> lockAndDoSelect((timeout == <span class="number">0</span>) ? -<span class="number">1</span> : timeout);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">lockAndDoSelect</span><span class="params">(<span class="keyword">long</span> timeout)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!isOpen())</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> ClosedSelectorException();</span><br><span class="line">        <span class="keyword">synchronized</span> (publicKeys) &#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (publicSelectedKeys) &#123;</span><br><span class="line">                <span class="keyword">return</span> doSelect(timeout);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">int</span> <span class="title">doSelect</span><span class="params">(<span class="keyword">long</span> timeout)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (closed)</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> ClosedSelectorException();</span><br><span class="line">    <span class="comment">//处理已经不监听的事件(文件描述符或Channel)</span></span><br><span class="line">    processDeregisterQueue();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//标记开始一个可能被中断的IO操作</span></span><br><span class="line">        begin();</span><br><span class="line">        <span class="comment">//通过调用native方法epoll_wait获取已经就绪的pollfd</span></span><br><span class="line">        pollWrapper.poll(timeout);</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        end();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//处理已经不监听的事件</span></span><br><span class="line">    processDeregisterQueue();</span><br><span class="line">    <span class="comment">//更新有事件变化的selectorKeys</span></span><br><span class="line">    <span class="keyword">int</span> numKeysUpdated = updateSelectedKeys();</span><br><span class="line">    <span class="keyword">if</span> (pollWrapper.interrupted()) &#123;</span><br><span class="line">        <span class="comment">// Clear the wakeup pipe</span></span><br><span class="line">        pollWrapper.putEventOps(pollWrapper.interruptedIndex(), <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">synchronized</span> (interruptLock) &#123;</span><br><span class="line">            pollWrapper.clearInterrupted();</span><br><span class="line">            IOUtil.drain(fd0);</span><br><span class="line">            interruptTriggered = <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> numKeysUpdated;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Selector.select()最终调用了pollArrayWrapper.poll()方法 将已经就绪的fd添加到pollWrapper里的数组中<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">poll</span><span class="params">(<span class="keyword">long</span> timeout)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    updateRegistrations();</span><br><span class="line">    updated = epollWait(pollArrayAddress, NUM_EPOLLEVENTS, timeout, epfd);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>; i&lt;updated; i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (getDescriptor(i) == incomingInterruptFD) &#123;</span><br><span class="line">            interruptedIndex = i;</span><br><span class="line">            interrupted = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> updated;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>PollArrayWrapper.poll()方法通过JNI调用系统方法<code>epoll_wait</code>来实现 获取准备就绪的句柄<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">JNIEXPORT jint JNICALL</span><br><span class="line">Java_sun_nio_ch_EPollArrayWrapper_epollWait(JNIEnv *env, jobject <span class="keyword">this</span>,</span><br><span class="line">                                            jlong address, jint numfds,</span><br><span class="line">                                            jlong timeout, jint epfd)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span> *<span class="title">events</span> = <span class="title">jlong_to_ptr</span>(<span class="title">address</span>);</span></span><br><span class="line">    <span class="keyword">int</span> res;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (timeout &lt;= <span class="number">0</span>) &#123;           <span class="comment">/* Indefinite or no wait */</span></span><br><span class="line">        RESTARTABLE(epoll_wait(epfd, events, numfds, timeout), res);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;                      <span class="comment">/* Bounded wait; bounded restarts */</span></span><br><span class="line">        res = iepoll(epfd, events, numfds, timeout);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (res &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        JNU_ThrowIOExceptionWithLastError(env, <span class="string">"epoll_wait failed"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> res;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br><code>epoll_wait</code>函数负责检测事件</p>
+<p>Selector.select()最终通过EPollArrayWrapper.poll()方法获取准备就绪的fd并添加到pollWrapper数组中，然后调用<code>updateSelectedKeys()</code>方法更新Selector持有的<code>Map&lt;Integer,SelectionKeyImpl&gt; fdToKey</code>中的<br>SelectionKeyImpl中事件状态</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">updateSelectedKeys</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> entries = pollWrapper.updated;</span><br><span class="line">    <span class="keyword">int</span> numKeysUpdated = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>; i&lt;entries; i++) &#123;</span><br><span class="line">        <span class="keyword">int</span> nextFD = pollWrapper.getDescriptor(i);</span><br><span class="line">        SelectionKeyImpl ski = fdToKey.get(Integer.valueOf(nextFD));</span><br><span class="line">        <span class="comment">// ski is null in the case of an interrupt</span></span><br><span class="line">        <span class="keyword">if</span> (ski != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">int</span> rOps = pollWrapper.getEventOps(i);</span><br><span class="line">            <span class="keyword">if</span> (selectedKeys.contains(ski)) &#123;</span><br><span class="line">                <span class="keyword">if</span> (ski.channel.translateAndSetReadyOps(rOps, ski)) &#123;</span><br><span class="line">                    numKeysUpdated++;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                ski.channel.translateAndSetReadyOps(rOps, ski);</span><br><span class="line">                <span class="keyword">if</span> ((ski.nioReadyOps() &amp; ski.nioInterestOps()) != <span class="number">0</span>) &#123;</span><br><span class="line">                    selectedKeys.add(ski);</span><br><span class="line">                    numKeysUpdated++;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> numKeysUpdated;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从pollWrapper中拿到准备就绪的fd，根据<code>Map&lt;Integer,SelectionKeyImpl&gt; fdToKey</code>的映射关系查到对应的SelectionKeyImpl并更新其持有Channel中事件的状态<code>SelectionKeyImpl.channel.translateAndSetReadyOps(rOps, ski)</code>，<br>准备就绪的fd对应的SelectionKeyImpl会被放入<code>SelectorImpl</code>中的<code>Set&lt;SelectionKey&gt; selectedKeys</code>中，这样用户级别的API <code>selector.selectedKes()</code>就可以拿到准备就绪的fd 进行业务处理</p>
+<h2 id="ServerSocketChannel-register"><a href="#ServerSocketChannel-register" class="headerlink" title="ServerSocketChannel.register()"></a>ServerSocketChannel.register()</h2><p>ServerSocketChannel.open()会初始化<code>ServerSocketChannelImpl</code>对象<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> SelectionKey <span class="title">register</span><span class="params">(Selector sel, <span class="keyword">int</span> ops,</span></span></span><br><span class="line"><span class="function"><span class="params">                                       Object att)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> ClosedChannelException</span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (regLock) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!isOpen())</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> ClosedChannelException();</span><br><span class="line">        <span class="keyword">if</span> ((ops &amp; ~validOps()) != <span class="number">0</span>)</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException();</span><br><span class="line">        <span class="keyword">if</span> (blocking)</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalBlockingModeException();</span><br><span class="line">        SelectionKey k = findKey(sel);</span><br><span class="line">        <span class="comment">//如果channel和selector已经注册过  则直接添加感兴趣的事件和附件</span></span><br><span class="line">        <span class="keyword">if</span> (k != <span class="keyword">null</span>) &#123;</span><br><span class="line">            k.interestOps(ops);</span><br><span class="line">            k.attach(att);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//如果没有注册过 先通过selector.register注册</span></span><br><span class="line">        <span class="keyword">if</span> (k == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">// New registration</span></span><br><span class="line">            <span class="keyword">synchronized</span> (keyLock) &#123;</span><br><span class="line">                <span class="keyword">if</span> (!isOpen())</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> ClosedChannelException();</span><br><span class="line">                k = ((AbstractSelector)sel).register(<span class="keyword">this</span>, ops, att);</span><br><span class="line">                addKey(k);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> k;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>接下来我们来看下selector.register的注册过程</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> SelectionKey <span class="title">register</span><span class="params">(AbstractSelectableChannel ch,</span></span></span><br><span class="line"><span class="function"><span class="params">                                      <span class="keyword">int</span> ops,</span></span></span><br><span class="line"><span class="function"><span class="params">                                      Object attachment)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!(ch <span class="keyword">instanceof</span> SelChImpl))</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalSelectorException();</span><br><span class="line">    SelectionKeyImpl k = <span class="keyword">new</span> SelectionKeyImpl((SelChImpl)ch, <span class="keyword">this</span>);</span><br><span class="line">    k.attach(attachment);</span><br><span class="line">    <span class="keyword">synchronized</span> (publicKeys) &#123;</span><br><span class="line">        implRegister(k);</span><br><span class="line">    &#125;</span><br><span class="line">    k.interestOps(ops);</span><br><span class="line">    <span class="keyword">return</span> k;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">implRegister</span><span class="params">(SelectionKeyImpl ski)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (closed)</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> ClosedSelectorException();</span><br><span class="line">    SelChImpl ch = ski.channel;</span><br><span class="line">    <span class="keyword">int</span> fd = Integer.valueOf(ch.getFDVal());</span><br><span class="line">    fdToKey.put(fd, ski);</span><br><span class="line">    pollWrapper.add(fd);</span><br><span class="line">    keys.add(ski);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果未注册过调用selector.register() 构建SelectionKey 注册感兴趣事件和attachment附件 并将新建的SelectionKey添加到pollWrapper的数组中</p>
+<h3 id="Selector-wakeup"><a href="#Selector-wakeup" class="headerlink" title="Selector.wakeup"></a>Selector.wakeup</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Selector <span class="title">wakeup</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (interruptLock) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!interruptTriggered) &#123;</span><br><span class="line">            pollWrapper.interrupt();</span><br><span class="line">            interruptTriggered = <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//EPollArrayWrapper</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Selector <span class="title">wakeup</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (interruptLock) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!interruptTriggered) &#123;</span><br><span class="line">            pollWrapper.interrupt();</span><br><span class="line">            interruptTriggered = <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">interrupt</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    interrupt(outgoingInterruptFD);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">native</span> <span class="keyword">void</span> <span class="title">interrupt</span><span class="params">(<span class="keyword">int</span> fd)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>EPollArrayWrapper.c<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">JNIEXPORT <span class="keyword">void</span> JNICALL</span><br><span class="line">Java_sun_nio_ch_EPollArrayWrapper_interrupt(JNIEnv *env, jobject <span class="keyword">this</span>, jint fd)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> fakebuf[<span class="number">1</span>];</span><br><span class="line">    fakebuf[<span class="number">0</span>] = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">if</span> (write(fd, fakebuf, <span class="number">1</span>) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        JNU_ThrowIOExceptionWithLastError(env,<span class="string">"write to interrupt fd failed"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="linux的poll实现"><a href="#linux的poll实现" class="headerlink" title="linux的poll实现"></a>linux的poll实现</h2><p>linux中有系统调用poll方法，定义如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">poll</span> <span class="params">(struct pollfd *fds, unsigned <span class="keyword">int</span> nfds, <span class="keyword">int</span> timeout)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>上述pollfd结构体定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span> &#123;</span></span><br><span class="line">	<span class="keyword">int</span> fd;</span><br><span class="line">	<span class="keyword">short</span> events;</span><br><span class="line">	<span class="keyword">short</span> revents;</span><br><span class="line">&#125; <span class="keyword">pollfd_t</span>;</span><br></pre></td></tr></table></figure>
+<p>int fd：一个文件描述句柄，代表一个Channel连接<br>short events:该文件描述符感兴趣的事件，如POLLIN表示该文件描述符有读事件，POLLOUT表示该文件描述符可写。<br>short revents：代表该文件描述符当前已有的事件，如有读事件则值为POLLIN，有读写事件则为POLLIN和POLLOUT的并集<br>整体的意思就是：你指定了结构体列表的起始地址和要监控的结构体个数，linux系统就会为你在timeout时间内监控上述结构体列表中的文件描述符的相关事件，并把发生的事件写入到上述的short revents属性中。<br>所以我们在执行一次poll之后，要想获取所有的发生了事件的文件描述符，则需要遍历整个pollfd列表，依次判断上述的short revents是否不等于0，不等于0代表发生了事件。</p>
+<ol>
+<li><p>jdk的poll实现概述<br>jdk要做的事情就是准备参数数据，然后去调用上述poll方法，这就要用到JNI来实现。jdk使用PollSelectorImpl来实现上述poll调用。<br>3.1 pollfd参数<br>jdk需要将java层面接收到的一个Channel连接映射到一个pollfd结构体，PollSelectorImpl针对此创建了一个AllocatedNativeObject 对象，该对象不是在堆中，它内部使用Unsafe类直接操作内存地址。它就是专门用来存放上述一个个pollfd结构体的内容，通过固定的offset来获取每个结构体的数据内容。<br>所以在调用上述poll方法的时候，直接传递的是AllocatedNativeObject对象的内存地址<br>注册Channel要做的事：其实就是将Channel的相关数据填充到上述AllocatedNativeObject的内存地址上，下次调用poll的时候，自然就会被监控<br>取消Channel注册要做的事：其实就是从上述AllocatedNativeObject的内存地址上移除该Channel代表的pollfd结构体</p>
+</li>
+<li><p>PollSelectorImpl代码分析<br>PollSelectorImpl的创建过程有如下2个内容<br>1 创建了pipe，得到读写文件描述符，并注册到了PollArrayWrapper中<br>2 创建了PollArrayWrapper<br>PollArrayWrapper pollWrapper：内部创建了一个上述介绍的AllocatedNativeObject对象（用于存放注册的Channel），而pollWrapper则更像是一个工具类，来方便的用户操作AllocatedNativeObject对象，pollWrapper把普通的操作都转化成对内存的操作<br>我们知道PollSelectorImpl在select过程的阻塞时间受控于所注册的Channel的事件，一旦有事件才会进行返回，没有事件的话就一直阻塞，为了可以允许手动控制这种局面的话，就额外增加了一个监控，即对pipe的读监控。对pipe的读文件描述符即fd0注册到PollArrayWrapper中的第一个位置，如果我们对pipe的写文件描述符fd1进行写数据操作，则pipe的读文件描述符必然会收到读事件，即可以使PollSelectorImpl不再阻塞，立即返回。<br>来看下初始化注册f0的代码</p>
+</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">initInterrupt</span><span class="params">(<span class="keyword">int</span> fd0, <span class="keyword">int</span> fd1)</span> </span>&#123;</span><br><span class="line">    interruptFD = fd1;</span><br><span class="line">    putDescriptor(<span class="number">0</span>, fd0);</span><br><span class="line">    putEventOps(<span class="number">0</span>, POLLIN);</span><br><span class="line">    putReventOps(<span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>即将fd0存放到PollArrayWrapper的AllocatedNativeObject中，并关注POLLIN即读事件。并将pipe的写文件描述符保存到interruptFD属性中<br>Selector对外提供了wakeup方法，来看下PollSelectorImpl的实现</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">interrupt</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    interrupt(interruptFD);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">native</span> <span class="keyword">void</span> <span class="title">interrupt</span><span class="params">(<span class="keyword">int</span> fd)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>这里就是对上述pipe的写文件描述符执行interrupt操作，来看看底层实现代码是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">JNIEXPORT <span class="keyword">void</span> JNICALL</span><br><span class="line">Java_sun_nio_ch_PollArrayWrapper_interrupt(JNIEnv *env, jobject <span class="keyword">this</span>, jint fd)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> fakebuf[<span class="number">1</span>];</span><br><span class="line">    fakebuf[<span class="number">0</span>] = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">if</span> (write(fd, fakebuf, <span class="number">1</span>) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">         JNU_ThrowIOExceptionWithLastError(env,</span><br><span class="line">                                          <span class="string">"Write to interrupt fd failed"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里就是简单的对pipe的写文件描述符写入数据用来触发pipe的读文件描述符的读事件而已。<br>至此，PollSelectorImpl的初始化过程就完成了。</p>
+<ol start="3">
+<li>注册和取消注册Channel过程<br>注册Channel其实就是向PollSelectorImpl中的PollArrayWrapper存放该Channel的fd、关注的事件信息，来看下实现代码</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">implRegister</span><span class="params">(SelectionKeyImpl ski)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (closeLock) &#123;</span><br><span class="line">        <span class="keyword">if</span> (closed)</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> ClosedSelectorException();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Check to see if the array is large enough</span></span><br><span class="line">        <span class="keyword">if</span> (channelArray.length == totalChannels) &#123;</span><br><span class="line">            <span class="comment">// Make a larger array</span></span><br><span class="line">            <span class="keyword">int</span> newSize = pollWrapper.totalChannels * <span class="number">2</span>;</span><br><span class="line">            SelectionKeyImpl temp[] = <span class="keyword">new</span> SelectionKeyImpl[newSize];</span><br><span class="line">            <span class="comment">// Copy over</span></span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i=channelOffset; i&lt;totalChannels; i++)</span><br><span class="line">                temp[i] = channelArray[i];</span><br><span class="line">            channelArray = temp;</span><br><span class="line">            <span class="comment">// Grow the NativeObject poll array</span></span><br><span class="line">            pollWrapper.grow(newSize);</span><br><span class="line">        &#125;</span><br><span class="line">        channelArray[totalChannels] = ski;</span><br><span class="line">        ski.setIndex(totalChannels);</span><br><span class="line">        pollWrapper.addEntry(ski.channel);</span><br><span class="line">        totalChannels++;</span><br><span class="line">        keys.add(ski);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>将channel存储到PollArrayWrapper中的AllocatedNativeObject中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Prepare another pollfd struct for use.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addEntry</span><span class="params">(SelChImpl sc)</span> </span>&#123;</span><br><span class="line">    putDescriptor(totalChannels, IOUtil.fdVal(sc.getFD()));</span><br><span class="line">    putEventOps(totalChannels, <span class="number">0</span>);</span><br><span class="line">    putReventOps(totalChannels, <span class="number">0</span>);</span><br><span class="line">    totalChannels++;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>存储的信息是：Channel的fd，关注的事件（初始是0）而channel的关注事件是后来才设置到PollArrayWrapper的AllocatedNativeObject中的</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">putEventOps</span><span class="params">(<span class="keyword">int</span> i, <span class="keyword">int</span> event)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> offset = SIZE_POLLFD * i + EVENT_OFFSET;</span><br><span class="line">    pollArray.putShort(offset, (<span class="keyword">short</span>)event);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>不同的Selector实现，上述实现过程也是不一样的。<br>再来看看取消注册Channel</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">implDereg</span><span class="params">(SelectionKeyImpl ski)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="comment">// Algorithm: Copy the sc from the end of the list and put it into</span></span><br><span class="line">    <span class="comment">// the location of the sc to be removed (since order doesn't</span></span><br><span class="line">    <span class="comment">// matter). Decrement the sc count. Update the index of the sc</span></span><br><span class="line">    <span class="comment">// that is moved.</span></span><br><span class="line">    <span class="keyword">int</span> i = ski.getIndex();</span><br><span class="line">    <span class="keyword">assert</span> (i &gt;= <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span> (i != totalChannels - <span class="number">1</span>) &#123;</span><br><span class="line">        <span class="comment">// Copy end one over it</span></span><br><span class="line">        SelectionKeyImpl endChannel = channelArray[totalChannels-<span class="number">1</span>];</span><br><span class="line">        channelArray[i] = endChannel;</span><br><span class="line">        endChannel.setIndex(i);</span><br><span class="line">        pollWrapper.release(i);</span><br><span class="line">        PollArrayWrapper.replaceEntry(pollWrapper, totalChannels - <span class="number">1</span>,</span><br><span class="line">                                      pollWrapper, i);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        pollWrapper.release(i);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// Destroy the last one</span></span><br><span class="line">    channelArray[totalChannels-<span class="number">1</span>] = <span class="keyword">null</span>;</span><br><span class="line">    totalChannels--;</span><br><span class="line">    pollWrapper.totalChannels--;</span><br><span class="line">    ski.setIndex(-<span class="number">1</span>);</span><br><span class="line">    <span class="comment">// Remove the key from keys and selectedKeys</span></span><br><span class="line">    keys.remove(ski);</span><br><span class="line">    selectedKeys.remove(ski);</span><br><span class="line">    deregister((AbstractSelectionKey)ski);</span><br><span class="line">    SelectableChannel selch = ski.channel();</span><br><span class="line">    <span class="keyword">if</span> (!selch.isOpen() &amp;&amp; !selch.isRegistered())</span><br><span class="line">        ((SelChImpl)selch).kill();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其实就是将最后一个直接覆盖到要删除的那个，以及更新相关数据的变化。</p>
+<ol start="4">
+<li>doSelect实现过程</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">int</span> <span class="title">doSelect</span><span class="params">(<span class="keyword">long</span> timeout)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> IOException</span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (channelArray == <span class="keyword">null</span>)</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> ClosedSelectorException();</span><br><span class="line">    processDeregisterQueue();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        begin();</span><br><span class="line">        pollWrapper.poll(totalChannels, <span class="number">0</span>, timeout);</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        end();</span><br><span class="line">    &#125;</span><br><span class="line">    processDeregisterQueue();</span><br><span class="line">    <span class="keyword">int</span> numKeysUpdated = updateSelectedKeys();</span><br><span class="line">    <span class="keyword">if</span> (pollWrapper.getReventOps(<span class="number">0</span>) != <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// Clear the wakeup pipe</span></span><br><span class="line">        pollWrapper.putReventOps(<span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">synchronized</span> (interruptLock) &#123;</span><br><span class="line">            IOUtil.drain(fd0);</span><br><span class="line">            interruptTriggered = <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> numKeysUpdated;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>第一步：就是处理那些取消了的Channel,即遍历Selector的Set<selectionkey> cancelledKeys，依次调用他们的取消注册和其他逻辑<br>第二步：就是使用pollWrapper执行poll过程，该过程即是准备好参数，然后调用linux的系统调用poll方法，如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">poll</span><span class="params">(<span class="keyword">int</span> numfds, <span class="keyword">int</span> offset, <span class="keyword">long</span> timeout)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> poll0(pollArrayAddress + (offset * SIZE_POLLFD),</span><br><span class="line">                 numfds, timeout);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">native</span> <span class="keyword">int</span> <span class="title">poll0</span><span class="params">(<span class="keyword">long</span> pollAddress, <span class="keyword">int</span> numfds, <span class="keyword">long</span> timeout)</span></span>;</span><br></pre></td></tr></table></figure><br>这里将AllocatedNativeObject的内存地址作为pollAddress，已注册的所有的Channel的数量作为numfds，timeout是用户传递的参数，然后就开始JNI调用<br>再看下native方法实现<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">JNIEXPORT jint JNICALL</span><br><span class="line">Java_sun_nio_ch_PollArrayWrapper_poll0(JNIEnv *env, jobject <span class="keyword">this</span>,</span><br><span class="line">                                       jlong address, jint numfds,</span><br><span class="line">                                       jlong timeout)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span> *<span class="title">a</span>;</span></span><br><span class="line">    <span class="keyword">int</span> err = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    a = (struct pollfd *) jlong_to_ptr(address);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (timeout &lt;= <span class="number">0</span>) &#123;           <span class="comment">/* Indefinite or no wait */</span></span><br><span class="line">        RESTARTABLE (poll(a, numfds, timeout), err);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;                     <span class="comment">/* Bounded wait; bounded restarts */</span></span><br><span class="line">        err = ipoll(a, numfds, timeout);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (err &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        JNU_ThrowIOExceptionWithLastError(env, <span class="string">"Poll failed"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> (jint)err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></selectionkey></p>
+<p>先将内存地址作为address转换成pollfd结构体地址，然后调用ipoll，在ipoll中我们就会见到linux的系统调用poll<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">int</span></span><br><span class="line">ipoll(struct pollfd fds[], <span class="keyword">unsigned</span> <span class="keyword">int</span> nfds, <span class="keyword">int</span> timeout)</span><br><span class="line">&#123;</span><br><span class="line">    jlong start, now;</span><br><span class="line">    <span class="keyword">int</span> remaining = timeout;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">timeval</span> <span class="title">t</span>;</span></span><br><span class="line">    <span class="keyword">int</span> diff;</span><br><span class="line"></span><br><span class="line">    gettimeofday(&amp;t, <span class="literal">NULL</span>);</span><br><span class="line">    start = t.tv_sec * <span class="number">1000</span> + t.tv_usec / <span class="number">1000</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">        <span class="keyword">int</span> res = poll(fds, nfds, remaining);</span><br><span class="line">        <span class="keyword">if</span> (res &lt; <span class="number">0</span> &amp;&amp; errno == EINTR) &#123;</span><br><span class="line">            <span class="keyword">if</span> (remaining &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">                gettimeofday(&amp;t, <span class="literal">NULL</span>);</span><br><span class="line">                now = t.tv_sec * <span class="number">1000</span> + t.tv_usec / <span class="number">1000</span>;</span><br><span class="line">                diff = now - start;</span><br><span class="line">                remaining -= diff;</span><br><span class="line">                <span class="keyword">if</span> (diff &lt; <span class="number">0</span> || remaining &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                start = now;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> res;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>至此linux系统开始为上述所有的Channel进行监控事件。<br>在发生了事件之后，会有2次遍历所有注册的Channel集合：<br>一次就是在linux底层poll调用的时候会遍历，将产生的事件值存放到pollfd结构体的revents地址中<br>另一次就是在java层面，获取产生的事件时，会遍历上述每一个结构体，拿到revents地址中的数据</p>
+<p>第三步：一旦第二步返回就说明有事件或者超时了，一旦有事件，则linux的poll调用会把产生的事件遍历的赋值到poll调用指定的地址上，即我们指定的一个个pollfd结构体，映射到java对象就是PollArrayWrapper的AllocatedNativeObject，这时候我们获取事件就是遍历底层的每一个地址，拿到pollfd结构体中的revents，如果revents不为0代表发生了事件，还要与Channel关注的事件进行相&amp;操作，不为0代表发生了Channel关注的事件了，并清空pollfd结构体中的revents数据供下次使用，代码如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Copy the information in the pollfd structs into the opss</span></span><br><span class="line"><span class="comment"> * of the corresponding Channels. Add the ready keys to the</span></span><br><span class="line"><span class="comment"> * ready queue.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">int</span> <span class="title">updateSelectedKeys</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> numKeysUpdated = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">// Skip zeroth entry; it is for interrupts only</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=channelOffset; i&lt;totalChannels; i++) &#123;</span><br><span class="line">        <span class="keyword">int</span> rOps = pollWrapper.getReventOps(i);</span><br><span class="line">        <span class="keyword">if</span> (rOps != <span class="number">0</span>) &#123;</span><br><span class="line">            SelectionKeyImpl sk = channelArray[i];</span><br><span class="line">            pollWrapper.putReventOps(i, <span class="number">0</span>);<span class="comment">//清理已有事件</span></span><br><span class="line">            <span class="keyword">if</span> (selectedKeys.contains(sk)) &#123;</span><br><span class="line">                <span class="keyword">if</span> (sk.channel.translateAndSetReadyOps(rOps, sk)) &#123;</span><br><span class="line">                    numKeysUpdated++;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                sk.channel.translateAndSetReadyOps(rOps, sk);</span><br><span class="line">                <span class="keyword">if</span> ((sk.nioReadyOps() &amp; sk.nioInterestOps()) != <span class="number">0</span>) &#123;</span><br><span class="line">                    selectedKeys.add(sk);</span><br><span class="line">                    numKeysUpdated++;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> numKeysUpdated;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>这里就是通过指针操作直接获取对应底层结构体的revents数据。</p>
+<p>第四步：上面提到了Selector也会注册一个fd用于监听，并且注册的位置时第一个即0，这里会取出该fd的发生事件，然后读取内容忽略掉即可，不然后仍然会触发该事件。代码如下<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> native boolean <span class="title">drain</span><span class="params">(<span class="keyword">int</span> fd)</span> throws IOException</span>;</span><br><span class="line">JNIEXPORT jboolean JNICALL</span><br><span class="line">Java_sun_nio_ch_IOUtil_drain(JNIEnv *env, jclass cl, jint fd)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">char</span> buf[<span class="number">128</span>];</span><br><span class="line">    <span class="keyword">int</span> tn = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">        <span class="keyword">int</span> n = read(fd, buf, <span class="keyword">sizeof</span>(buf));</span><br><span class="line">        tn += n;</span><br><span class="line">        <span class="keyword">if</span> ((n &lt; <span class="number">0</span>) &amp;&amp; (errno != EAGAIN))</span><br><span class="line">            JNU_ThrowIOExceptionWithLastError(env, <span class="string">"Drain"</span>);</span><br><span class="line">        <span class="keyword">if</span> (n == (<span class="keyword">int</span>)<span class="keyword">sizeof</span>(buf))</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        <span class="keyword">return</span> (tn &gt; <span class="number">0</span>) ? JNI_TRUE : JNI_FALSE;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+
+    </div>
+
+    
+    
+    
+    
+      <div>
+        <div id="reward-container">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button id="reward-button" disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+        
+      
+      <div style="display: inline-block">
+        <img src="https://raw.githubusercontent.com/sdw2330976/netty-learning/master/doc/wechatpay.jpeg" alt="上班的1990 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+      </div>
+
+    <footer class="post-footer">
+          
+        
+        <div class="post-tags">
+            <a href="/tags/IO/" rel="tag"># IO</a>
+          
+        </div>
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+              <a href="/Java集合/数据结构之Queue/" rel="next" title="数据结构之Queue">
+                <i class="fa fa-chevron-left"></i> 数据结构之Queue
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+              <a href="/Java并发/ScheduledThreadPoolExecutor/" rel="prev" title="ScheduledThreadPoolExecutor">
+                ScheduledThreadPoolExecutor <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+  </div>
+
+
+          </div>
+          
+
+
+        </div>
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image"
+      src="https://nimg.ws.126.net/?url=https://nos.netease.com/relottery/user/20170222/OloRZG.jpeg"
+      alt="上班的1990">
+  <p class="site-author-name" itemprop="name">上班的1990</p>
+  <div class="site-description motion-element" itemprop="description">do something make yourself happy,such as coding.</div>
+</div>
+  <nav class="site-state motion-element">
+      <div class="site-state-item site-state-posts">
+        
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">34</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+    
+      
+      
+      <div class="site-state-item site-state-categories">
+        
+          
+            <a href="/categories/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span>
+        </a>
+      </div>
+    
+      
+      
+      <div class="site-state-item site-state-tags">
+        
+          
+            <a href="/tags/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">标签</span>
+        </a>
+      </div>
+    
+  </nav>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+      
+      
+        
+      
+      
+        
+      
+        <a href="https://github.com/sdw2330976" title="GitHub &rarr; https://github.com/sdw2330976" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+    
+      <span class="links-of-author-item">
+      
+      
+        
+      
+      
+        
+      
+        <a href="https://weibo.com/1853131443" title="Weibo &rarr; https://weibo.com/1853131443" rel="noopener" target="_blank"><i class="fa fa-fw fa-weibo"></i>Weibo</a>
+      </span>
+    
+  </div>
+
+
+
+        </div>
+      </div>
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Selector-open"><span class="nav-number">1.</span> <span class="nav-text">Selector.open</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#获取SelectorProvider"><span class="nav-number">1.1.</span> <span class="nav-text">获取SelectorProvider</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#不一样的DefaultSelectorProvider"><span class="nav-number">1.2.</span> <span class="nav-text">不一样的DefaultSelectorProvider</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#EPollSelectorProvider"><span class="nav-number">1.3.</span> <span class="nav-text">EPollSelectorProvider</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Selector的真身EPollSelectorImpl"><span class="nav-number">1.4.</span> <span class="nav-text">Selector的真身EPollSelectorImpl</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#关键的EPollArrayWrapper"><span class="nav-number">1.5.</span> <span class="nav-text">关键的EPollArrayWrapper</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#epollCreate"><span class="nav-number">1.5.1.</span> <span class="nav-text">epollCreate()</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Selector-select"><span class="nav-number">2.</span> <span class="nav-text">Selector.select()</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ServerSocketChannel-register"><span class="nav-number">3.</span> <span class="nav-text">ServerSocketChannel.register()</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Selector-wakeup"><span class="nav-number">3.1.</span> <span class="nav-text">Selector.wakeup</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#linux的poll实现"><span class="nav-number">4.</span> <span class="nav-text">linux的poll实现</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2018 – <span itemprop="copyrightYear">2020</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">上班的1990</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.9.0</div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.2.0</div>
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+      </div>
+
+    
+
+  </div>
+
+  
+  <script src="/lib/jquery/index.js?v=3.4.1"></script>
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  <script src="/js/utils.js?v=7.2.0"></script>
+  <script src="/js/motion.js?v=7.2.0"></script>
+
+  
+  <script src="/js/affix.js?v=7.2.0"></script>
+  <script src="/js/schemes/pisces.js?v=7.2.0"></script>
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.2.0"></script>
+<script src="/js/post-details.js?v=7.2.0"></script>
+
+
+
+  <script src="/js/next-boot.js?v=7.2.0"></script>
+
+  
+
+  
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
